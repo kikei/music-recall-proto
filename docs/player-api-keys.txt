@@ -1,10 +1,19 @@
-Setting up the listening player (Spotify & YouTube)
-===================================================
+Setting up the listening player (Spotify, YouTube & Niconico)
+=============================================================
 
-The card detail view can embed a player so you can listen to a track again.
-It prefers Spotify and falls back to YouTube when no Spotify match is found.
-Both are optional and free; if no keys are set, the player is simply hidden
-and the rest of the app works as usual.
+The app embeds a player so you can listen again -- on the card detail view, on
+the new card shown after a session, and on recall results.
+
+There are two ways a player is set:
+
+1. Paste a viewing URL (Spotify / YouTube / Niconico) at session start. The URL
+   is embedded directly, so this needs NO API keys.
+2. Auto-resolve from the target and artist when no URL is pasted. Spotify is
+   preferred, then YouTube. This path uses the Search APIs and needs the keys
+   below. Niconico is never auto-resolved -- paste its URL instead.
+
+So the keys are optional: without them, pasted URLs and Niconico still work,
+and auto-resolution is simply skipped. Both services are free.
 
 Add the keys to the .env file in the project root, then restart the dev
 server (environment variables are read at process startup).
@@ -86,6 +95,14 @@ Quota (free tier):
   track lookups per day are free.
 - Resolved players are cached in the database, so reopening the same card
   does not spend more quota.
+
+
+Niconico
+--------
+
+No setup is needed. Metadata is read from the public getthumbinfo API and the
+video is embedded via embed.nicovideo.jp, both without any key. Just paste a
+Niconico URL (nicovideo.jp/watch/... or nico.ms/...) at session start.
 
 
 Security

@@ -1,6 +1,10 @@
 # Music Recall Engine — Concept
 
-A concept document focused on the core ideas.
+A concept document focused on the core ideas. This describes the intended
+vision; the current prototype implements a subset of it (for example, recall
+takes a free-text cue or starts from a card, rather than integrating with
+now-playing, articles, or likes). See [README.md](./README.md) for what the
+prototype actually does.
 
 ## Overview
 

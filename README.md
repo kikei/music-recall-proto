@@ -51,7 +51,9 @@ at the same time. Open <http://localhost:5173> in a browser.
 | `PORT` | `8787` | Backend port |
 
 The Spotify / YouTube keys are only used to auto-resolve a player when no URL is
-pasted. Pasting a URL, and Niconico lookup, need no keys.
+pasted. Pasting a URL, and Niconico lookup, need no keys. See
+[docs/player-api-keys.txt](./docs/player-api-keys.txt) for step-by-step setup of
+the Spotify and YouTube keys.
 
 ## Data
 
@@ -67,3 +69,10 @@ recall.
   Niconico), `routes/` endpoints.
 - `src/` — React frontend. `screens/` holds the three screens, `api/` is the
   client.
+
+## Development
+
+There is no test suite. After changes, verify with `npx tsc --noEmit` (types)
+and `npx vite build` (production build); format with `npm run format`
+(Prettier). `better-sqlite3` builds a native module, so `npm install` needs a
+working build toolchain.

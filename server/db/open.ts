@@ -1,7 +1,13 @@
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import { schema } from './schema.js';
 
-const dbPath = process.env.DB_PATH ?? 'music-recall.sqlite';
+const dbPath = process.env.DB_PATH ?? 'data/music-recall.sqlite';
+
+// Make sure the directory exists before opening (better-sqlite3 does not
+// create it).
+mkdirSync(dirname(dbPath), { recursive: true });
 
 // Share a single connection across the whole process.
 export const db = new Database(dbPath);

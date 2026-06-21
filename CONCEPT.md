@@ -1,153 +1,186 @@
-以下、まずは中核だけに絞ったコンセプト書です。
+# Music Recall Engine — Concept
 
-# 音楽想起エンジン コンセプト書
+A concept document focused on the core ideas.
 
-## 概要
+## Overview
 
-本アプリケーションは、音楽を聴いた体験を「保存」するのではなく、後日ふたたび想起される可能性を作るための個人用音楽想起エンジンである。
+This application does not "store" the experience of listening to music; it
+creates the possibility that the experience will be **recalled** again later.
+It is a personal music recall engine.
 
-対象は、Spotify、Kiite、音楽記事、レビュー、インタビュー、ライナーノーツなどを通じて出会った音楽である。聴取中に生まれた印象や引っかかりを、LLM との対話によって言語化し、あとで想起しやすい小さな記憶片として残す。
+The music it concerns is whatever you encounter through channels such as
+Spotify, Kiite, articles, reviews, interviews, or liner notes. While listening,
+the impressions and snags that arise are put into words through a dialogue with
+an LLM and left behind as small memory fragments that are easy to recall later.
 
-中心となる考え方は「再会の予約」である。
-気に入った曲やアルバムを単にリストに入れるのではなく、後日の別の曲、記事、アーティスト、音の特徴、聴取中の発話などをきっかけに、過去の音楽体験が再び浮上する状態を作る。
+The central idea is "booking a reunion." Rather than simply adding a song or
+album you liked to a list, you create a state in which a past listening
+experience surfaces again, triggered later by another song, an article, an
+artist, a sonic feature, or something you said while listening.
 
-## 目的
+## Purpose
 
-音楽を大量に聴く中で、良かった曲や印象的なアルバムが日々の情報の波に流れてしまう。
-本アプリケーションは、それらをすべて覚えることや厳選することを目的としない。
+When you listen to a lot of music, the good songs and striking albums get swept
+away in the daily flood of information. This application does not aim to
+remember all of them, nor to curate a select few.
 
-目的は、強く引っかかった音楽体験に対して、後日ふたたび出会うための細い糸を結ぶことである。
+Its purpose is to tie a thin thread back to the listening experiences that
+snagged you strongly, so that you can meet them again later.
 
-そのために、曲名やアーティスト名だけではなく、聴こえた音、楽器、構造、場面、背景、自分の反応を短く残す。
-後日、現在聴いている曲や読んでいる記事との間に接続が見つかったとき、アプリケーションは過去の記憶片を浮上させ、その理由を提示する。
+To that end it keeps not only the title and artist but a short record of the
+sounds you heard, the instruments, the structure, the scene, the background,
+and your own reaction. Later, when a connection is found between what you are
+listening to or reading now and the past, the application surfaces the past
+fragment and presents the reason.
 
-## 中核体験
+## The core experience
 
-ユーザーは音楽を聴きながら、気になった瞬間に短い言葉を入力する。
+While listening, you type short words the moment something catches your
+attention.
 
-例:
+Examples:
 
-「最後の曲が良い」
-「金属音が反復していて、だんだん行進みたいに聞こえる」
-「声が主役というより、景色の中に混ざっている感じがする」
-「この記事を読んでから聴いたら、印象が変わった」
+- "The last track is good."
+- "A metallic sound keeps repeating, and it gradually starts to sound like a
+  march."
+- "The voice isn't the lead so much as mixed into the scenery."
+- "Reading this article before listening changed the impression."
 
-LLM はその断片を受け取り、音の特徴、背景、聴取上の引っかかりを整理する。
-聴取後、それらは短い「再会カード」として圧縮される。
+The LLM receives the fragment and organizes the sonic features, the background,
+and the snag in your listening. After listening, these are compressed into a
+short "reunion card."
 
-再会カードは、単なる感想やレビューではない。
-後日その音楽を思い出すための札である。
+A reunion card is not a mere review or impression. It is a marker for recalling
+that music later.
 
-## 再会カード
+## The reunion card
 
-再会カードは、音楽との出会いを記録する最小単位である。
+The reunion card is the smallest unit that records an encounter with music.
 
-カードには、次の要素を持たせる。
+A card holds the following elements.
 
-### 対象
+### Target
 
-曲、アルバム、または聴取体験の対象。
+The song, album, or object of the listening experience.
 
-### 引っかかり
+### Snag
 
-なぜその音楽が流れずに残ったのか。
-ユーザー自身の反応を短く記す。
+Why this music stayed with you instead of flowing past. A short note of your own
+reaction.
 
-### 想起フレーズ
+### Recall phrase
 
-後で読んだときに音や情景が戻るような、中粒度の具体的な手掛かり。
+A medium-grained, concrete cue that brings the sound or scene back when you read
+it later.
 
-例:
+Example:
 
-「金属缶のループ、列車、汽笛、チューバ、マーチング・バンド、パレード録音。最後に音が遠ざかって消える。」
+> "A loop of metal cans, a train, a steam whistle, a tuba, a marching band, a
+> parade recording. At the end the sound recedes and disappears."
 
-### 背景
+### Background
 
-記事、インタビュー、レビュー、ライナーノーツ、LLM の解釈から得られた、聴取体験を支える文脈。
+The context that supports the listening experience, drawn from articles,
+interviews, reviews, liner notes, and the LLM's interpretation.
 
-## 想起
+## Recall
 
-本アプリケーションの中心機能は、記録したカードを一覧表示することではなく、適切なタイミングで想起させることである。
+The central function of this application is not to list the recorded cards but
+to recall them at the right moment.
 
-想起は、次のようなきっかけから発生する。
+Recall is triggered by things such as:
 
-現在聴いている曲。
-聴取中のユーザーの発話。
-Love した曲。
-読んでいる音楽記事。
-過去に記録したアーティストやアルバム。
-曲中に現れる楽器、音、構造、場面。
-「何か前に聴いた感じがする」という曖昧な入力。
+- the song you are listening to now,
+- something you say while listening,
+- an article you are reading,
+- an artist or album you recorded before,
+- an instrument, sound, structure, or scene that appears in a song,
+- a vague input like "this feels like something I've heard before."
 
-アプリケーションは、現在のきっかけと過去の再会カードを照合し、関連する記憶片を少数だけ浮上させる。
+The application matches the current trigger against past reunion cards and
+surfaces only a few related fragments.
 
-重要なのは、単に関連カードを出すことではない。
-なぜ今そのカードが想起されたのかを説明することである。
+What matters is not simply returning related cards, but explaining **why this
+card was recalled now**.
 
-例:
+Example:
 
-「今聴いている曲の、フィールド録音が反復から行進感へ変わっていく部分が、以前記録した『金属缶のループからパレード録音へ広がる終曲』と接続しそうです。」
+> "The part of the song you are listening to now, where a field recording shifts
+> from repetition into a sense of marching, seems to connect with the card you
+> recorded earlier: 'a final track that expands from a loop of metal cans into a
+> parade recording.'"
 
-この説明によって、検索結果ではなく、想起として機能する。
+This explanation is what makes the result function as recall rather than as
+search.
 
-## LLM の役割
+## The role of the LLM
 
-LLM は推薦エンジンではなく、音楽ソムリエとして振る舞う。
+The LLM is not a recommendation engine; it behaves as a music sommelier.
 
-主な役割は次の通りである。
+Its main roles are:
 
-聴取中の曖昧な印象を受け取る。
-印象を想起しやすい言葉に変換する。
-曲中の音、楽器、構造、場面を整理する。
-記事やインタビューの内容を、聴取体験と結び付ける。
-聴取後に再会カードへ圧縮する。
-現在の聴取体験から、過去のカードを想起させる。
-想起された理由を説明する。
+- to receive vague impressions while you listen,
+- to convert impressions into words that are easy to recall,
+- to organize the sounds, instruments, structure, and scenes in a song,
+- to connect the content of articles and interviews to the listening
+  experience,
+- to compress all of this into a reunion card after listening,
+- to recall past cards from the current listening experience,
+- to explain why a card was recalled.
 
-LLM は、ユーザーの代わりに完成した評論を書くのではない。
-ユーザーがあとで再び音楽に戻れるよう、言葉の足場を作る。
+The LLM does not write a finished review on your behalf. It builds a verbal
+foothold so that you can return to the music again later.
 
-## データの考え方
+## How the data is framed
 
-本アプリケーションが扱う主なデータは、曲そのものではなく、音楽との出会いである。
+The main data this application handles is not the songs themselves but
+encounters with music.
 
-同じ曲であっても、出会い方が違えば別の記憶片になり得る。
-記事経由で聴いた曲、偶然流れてきた曲、数年ぶりに聴き直した曲は、それぞれ異なる想起の文脈を持つ。
+Even for the same song, a different way of encountering it can become a
+different memory fragment. A song heard via an article, a song that happened to
+play, and a song revisited after several years each carry a different context
+for recall.
 
-したがって、中心となるデータ単位は「曲」ではなく「聴取体験」である。
+Therefore the central unit of data is not the "song" but the "listening
+experience."
 
-再会カードは、短い本文と検索可能な手掛かりを持つ。
-本文には、ユーザーの印象、LLM による言語化、記事やレビューから得た背景が含まれる。
+A reunion card holds a short body and searchable cues. The body contains your
+impression, the LLM's wording, and the background drawn from articles and
+reviews.
 
-想起には、全文検索、意味検索、メタデータ、過去の Love や聴取履歴を組み合わせる。
+Recall combines semantic search with metadata.
 
-## 最小の利用フロー
+## The minimal usage flow
 
-ユーザーは Spotify や Kiite で音楽を聴く。
+You listen to music on Spotify, Kiite, or elsewhere.
 
-気になった瞬間に、短い印象を入力する。
+The moment something catches you, you type a short impression.
 
-LLM が印象を受け取り、言語化を補助する。
+The LLM receives the impression and helps put it into words.
 
-聴取後、会話内容から再会カードを作る。
+After listening, a reunion card is made from the conversation.
 
-後日、別の曲、記事、発話、Love などをきっかけに、関連する再会カードが浮上する。
+Later, triggered by another song, an article, or something you said, a related
+reunion card surfaces.
 
-ユーザーは想起理由を読み、必要に応じてその音楽に再会する。
+You read the reason for the recall and, if you wish, reunite with that music.
 
-再会した結果、さらに印象が深まればカードに追記される。
+If the reunion deepens the impression, the card is appended to.
 
-## コンセプトの要約
+## Summary
 
-本アプリケーションは、音楽を保存するアプリではない。
-音楽との出会いを、後日ふたたび想起される形に変換するアプリである。
+This application is not an app for storing music. It is an app that converts
+encounters with music into a form that can be recalled again later.
 
-中心にあるのは、曲の管理ではなく、再会の予約である。
+At its center is not the management of songs but the booking of a reunion.
 
-聴いている最中の曖昧な印象を、LLM との対話によって言葉にし、音、楽器、背景、場面、自分の反応を含む小さな記憶片として残す。
+The vague impression you have while listening is put into words through a
+dialogue with the LLM and left as a small memory fragment that includes the
+sound, the instruments, the background, the scene, and your own reaction.
 
-その記憶片は、後日、別の音楽や記事や発話をきっかけに浮上する。
-そのときアプリケーションは、なぜ今それが思い出されたのかを説明する。
+That fragment surfaces later, triggered by other music, an article, or something
+you said. At that moment the application explains why it was recalled just now.
 
-これにより、日々増えていく音楽体験をすべて抱え込むのではなく、強く引っかかったものだけが、必要なときに再び立ち上がる状態を作る。
-
+This creates a state in which, rather than carrying every accumulating listening
+experience, only the ones that snagged you strongly rise again when you need
+them.

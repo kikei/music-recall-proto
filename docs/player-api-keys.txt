@@ -1,0 +1,93 @@
+Setting up the listening player (Spotify & YouTube)
+===================================================
+
+The card detail view can embed a player so you can listen to a track again.
+It prefers Spotify and falls back to YouTube when no Spotify match is found.
+Both are optional and free; if no keys are set, the player is simply hidden
+and the rest of the app works as usual.
+
+Add the keys to the .env file in the project root, then restart the dev
+server (environment variables are read at process startup).
+
+
+Spotify
+-------
+
+The app uses the Client Credentials flow: the server talks to Spotify on its
+own, so there is no user login or OAuth redirect to deal with. You only need a
+Client ID and Client Secret.
+
+1. Go to the Spotify Developer Dashboard and log in:
+   https://developer.spotify.com/dashboard
+
+2. Click "Create app".
+   - App name / description: anything you like.
+   - Redirect URI: required by the form, but NOT used by this app. Enter any
+     valid URL (for example http://127.0.0.1:8787/callback) and click Add.
+   - "Which API/SDKs are you planning to use?": check "Web API".
+   - Agree to the terms and save.
+
+3. Open the app, go to Settings, and copy:
+   - Client ID
+   - Client secret (click "View client secret")
+
+4. Add them to .env:
+
+       SPOTIFY_CLIENT_ID=your-client-id
+       SPOTIFY_CLIENT_SECRET=your-client-secret
+
+Notes:
+- The Client Credentials flow works while the app is still in Development
+  mode. You do not need to request a quota extension or add users.
+- It only grants access to the public catalog search, which is all this app
+  needs to look up a track ID.
+
+
+YouTube
+-------
+
+The app only searches for videos from the server, so no OAuth is needed --
+just a single API key.
+
+1. Open the Google Cloud Console:
+   https://console.cloud.google.com/
+
+2. Create a project (or reuse an existing one):
+   - Use the project picker at the top, then "New Project".
+   - Give it any name (for example music-recall) and create it.
+   - Make sure the new project is selected.
+
+3. Enable the YouTube Data API v3:
+   - "APIs & Services" -> "Library".
+   - Search for "YouTube Data API v3" and open it.
+   - Click "Enable".
+   Direct link:
+   https://console.cloud.google.com/apis/library/youtube.googleapis.com
+
+4. Create an API key:
+   - "APIs & Services" -> "Credentials".
+   - "+ Create credentials" -> "API key".
+   - Copy the generated key.
+
+5. (Recommended) Restrict the key:
+   - Edit the key, under "API restrictions" choose "Restrict key" and allow
+     only "YouTube Data API v3".
+   - "Application restrictions" can stay "None" for local development.
+   This way the key is useless for anything other than YouTube search if it
+   ever leaks.
+
+6. Add it to .env:
+
+       YOUTUBE_API_KEY=your-api-key
+
+Quota (free tier):
+- 10,000 units per day by default.
+- This app's search (search.list) costs 100 units per call, so roughly 100
+  track lookups per day are free.
+- Resolved players are cached in the database, so reopening the same card
+  does not spend more quota.
+
+
+Security
+--------
+Never commit your keys. The .env file is already in .gitignore.

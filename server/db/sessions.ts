@@ -44,6 +44,15 @@ export function getSession(id: string): Session | undefined {
     | undefined;
 }
 
+// Open sessions for the workspace sidebar, oldest first.
+export function listActiveSessions(): Session[] {
+  return db
+    .prepare(
+      "SELECT * FROM sessions WHERE status = 'active' ORDER BY created_at ASC"
+    )
+    .all() as Session[];
+}
+
 export function closeSession(id: string): void {
   db.prepare("UPDATE sessions SET status = 'closed' WHERE id = ?").run(id);
 }

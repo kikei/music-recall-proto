@@ -119,7 +119,7 @@ search.
 
 ## The role of the LLM
 
-The LLM is not a recommendation engine; it behaves as a music sommelier.
+The LLM is not a recommendation engine; it behaves as a Co-listener.
 
 Its main roles are:
 

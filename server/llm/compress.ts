@@ -17,7 +17,7 @@ export interface CompressedCard {
   background: string;
 }
 
-const system = `あなたは音楽ソムリエです。1 回の聴取セッションの対話を、後日
+const system = `あなたは Co-listener です。1 回の聴取セッションの対話を、後日
 ふたたびこの音楽を思い出すための「再会カード」へ圧縮します。
 
 対象は曲のことも、アルバム全体のこともあります。対象の単位に合わせて書くこと。
@@ -38,7 +38,7 @@ export async function compressSession(
   history: Message[]
 ): Promise<CompressedCard> {
   const transcript = history
-    .map(m => `${m.role === 'user' ? 'ユーザー' : 'ソムリエ'}: ${m.content}`)
+    .map(m => `${m.role === 'user' ? 'ユーザー' : 'Co-listener'}: ${m.content}`)
     .join('\n');
   const album = work.album ?? '不明';
   const user = `対象: ${work.title} / ${work.artist} (収録アルバム: ${album})

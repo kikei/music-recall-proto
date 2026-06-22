@@ -131,7 +131,7 @@ sessions.post('/:id/related', async c => {
   return c.json(related);
 });
 
-// Posting a fragment makes the sommelier help articulate it, consulting the
+// Posting a fragment makes the Co-listener help articulate it, consulting the
 // web as needed. mode: 'comment' (default) responds to an impression/fragment;
 // 'research' always runs a web search and returns the findings. In 'research'
 // the body is optional (empty means investigate the recent context).

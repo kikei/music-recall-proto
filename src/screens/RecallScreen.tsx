@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { recall, recallFromCard, type RecallResult } from '../api/client.js';
 import { RecallResultList } from '../components/RecallResultList.js';
 
@@ -8,71 +8,39 @@ export interface RecallFromCardRequest {
   artist: string;
 }
 
+// Recall results view. The cue is entered in the sidebar; this only runs the
+// search and shows the outcome. App remounts it (via a nonce key) per request.
 export function RecallScreen({
-  onOpenCard,
+  query,
   fromCard,
-  onFromCardConsumed,
+  onOpenCard,
 }: {
-  onOpenCard: (cardId: string, fromRecall: boolean) => void;
+  query: string | null;
   fromCard: RecallFromCardRequest | null;
-  onFromCardConsumed: () => void;
+  onOpenCard: (cardId: string, fromRecall: boolean) => void;
 }) {
-  const [query, setQuery] = useState('');
   const [results, setResults] = useState<RecallResult[] | null>(null);
-  const [source, setSource] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
-  const handled = useRef<RecallFromCardRequest | null>(null);
 
-  async function run() {
-    if (!query.trim()) return;
-    setBusy(true);
-    setError('');
-    setSource(null);
-    try {
-      setResults(await recall(query.trim()));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const source = fromCard ? `${fromCard.title} / ${fromCard.artist}` : query;
 
-  // When arriving from a card detail's "recall", recall from that card.
   useEffect(() => {
-    if (!fromCard || handled.current === fromCard) return;
-    handled.current = fromCard;
-    onFromCardConsumed();
-    setQuery('');
-    setSource(`${fromCard.title} / ${fromCard.artist}`);
-    setBusy(true);
-    setError('');
-    setResults(null);
-    recallFromCard(fromCard.cardId)
+    const job = fromCard
+      ? recallFromCard(fromCard.cardId)
+      : recall(query ?? '');
+    job
       .then(setResults)
       .catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false));
-  }, [fromCard, onFromCardConsumed]);
+    // Runs once; App remounts this view per request via a nonce key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <section className="recall">
-      <p className="lead">
-        今のきっかけを入れてください。今聴いている曲の印象でも、
-        「何か前に聴いた感じがする」でも。
-      </p>
-      <textarea
-        placeholder="例: 反復から行進感に変わっていくフィールド録音"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-      />
-      <button
-        className="primary"
-        disabled={busy || !query.trim()}
-        onClick={run}
-      >
-        {busy ? '想起中…' : '想起する'}
-      </button>
       {source && <p className="recall-source">「{source}」からの想起</p>}
+      {busy && <p className="hint">想起中…</p>}
       {error && <p className="error">{error}</p>}
       {results && results.length === 0 && (
         <p className="hint">浮上したカードはありませんでした。</p>

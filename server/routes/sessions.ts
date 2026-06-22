@@ -1,7 +1,13 @@
 import { Hono } from 'hono';
-import { createSession, getSession } from '../db/sessions.js';
+import {
+  createSession,
+  getSession,
+  listActiveSessions,
+  deleteSession,
+} from '../db/sessions.js';
 import { getCard } from '../db/cards.js';
 import { addMessage, listMessages } from '../db/messages.js';
+import { relatedToText } from '../cards/related.js';
 import {
   continueSession,
   openingMessage,
@@ -14,6 +20,9 @@ import { describePlayer } from '../player/describe-player.js';
 import type { Player } from '../player/provider.js';
 
 export const sessions = new Hono();
+
+// Open sessions for the workspace sidebar.
+sessions.get('/', c => c.json(listActiveSessions()));
 
 // Decide the title and artist from the input and the pasted URL. If either is
 // empty but a URL is present, fill it from the dedicated API metadata. Returns
@@ -108,7 +117,30 @@ sessions.get('/:id', c => {
   return c.json({ session, messages: listMessages(session.id) });
 });
 
-// Posting a fragment makes the sommelier help articulate it, consulting the
+// Discard an open session (and its messages) from the workspace.
+sessions.delete('/:id', c => {
+  const session = getSession(c.req.param('id'));
+  if (!session) return c.json({ error: 'not found' }, 404);
+  deleteSession(session.id);
+  return c.json({ ok: true });
+});
+
+// Ambient recall: related past cards for the whole conversation so far.
+// Embedding only (no LLM, no reason), meant to run after each Co-listener turn.
+sessions.post('/:id/related', async c => {
+  const session = getSession(c.req.param('id'));
+  if (!session) return c.json({ error: 'not found' }, 404);
+  const transcript = listMessages(session.id)
+    .map(m => m.content)
+    .join('\n');
+  const related = await relatedToText(
+    transcript,
+    session.base_card_id ?? undefined
+  );
+  return c.json(related);
+});
+
+// Posting a fragment makes the Co-listener help articulate it, consulting the
 // web as needed. mode: 'comment' (default) responds to an impression/fragment;
 // 'research' always runs a web search and returns the findings. In 'research'
 // the body is optional (empty means investigate the recent context).

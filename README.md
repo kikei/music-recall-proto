@@ -13,7 +13,7 @@ See [CONCEPT.md](./CONCEPT.md) for the details of the concept.
   recording, etc.). You may paste a viewing URL (Spotify / YouTube / Niconico)
   to begin — in that case the target and artist are filled in automatically and
   do not need to be typed. Throw short words the moment something catches you,
-  and an LLM playing a music sommelier helps put it into words, searching the
+  and an LLM acting as a Co-listener helps put it into words, searching the
   web when useful. "Make a reunion card" compresses the session into one card.
 - **Recall**: Enter the current trigger (an impression or a vague phrase) and
   hit "recall." Semantic search surfaces a few related cards and explains **why

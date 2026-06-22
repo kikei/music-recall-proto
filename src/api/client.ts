@@ -183,3 +183,21 @@ export function recall(query: string): Promise<RecallResult[]> {
     body: JSON.stringify({ query }),
   });
 }
+
+// Open (active) sessions for the workspace sidebar.
+export function listActiveSessions(): Promise<Session[]> {
+  return request('/api/sessions');
+}
+
+// Load a session with its messages, to foreground or resume it.
+export function getSession(
+  sessionId: string
+): Promise<{ session: Session; messages: ChatMessage[] }> {
+  return request(`/api/sessions/${sessionId}`);
+}
+
+// Ambient recall for the current conversation: related cards with no reason
+// text. Runs after each Co-listener turn.
+export function relatedToSession(sessionId: string): Promise<Card[]> {
+  return request(`/api/sessions/${sessionId}/related`, { method: 'POST' });
+}

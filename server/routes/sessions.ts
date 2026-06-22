@@ -3,6 +3,7 @@ import {
   createSession,
   getSession,
   listActiveSessions,
+  deleteSession,
 } from '../db/sessions.js';
 import { getCard } from '../db/cards.js';
 import { addMessage, listMessages } from '../db/messages.js';
@@ -114,6 +115,14 @@ sessions.get('/:id', c => {
   const session = getSession(c.req.param('id'));
   if (!session) return c.json({ error: 'not found' }, 404);
   return c.json({ session, messages: listMessages(session.id) });
+});
+
+// Discard an open session (and its messages) from the workspace.
+sessions.delete('/:id', c => {
+  const session = getSession(c.req.param('id'));
+  if (!session) return c.json({ error: 'not found' }, 404);
+  deleteSession(session.id);
+  return c.json({ ok: true });
 });
 
 // Ambient recall: related past cards for the whole conversation so far.

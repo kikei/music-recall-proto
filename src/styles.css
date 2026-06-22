@@ -98,6 +98,43 @@ body {
   color: var(--accent);
 }
 
+.side-item.session {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+}
+
+.side-item-main {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-item-del {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+}
+
+.side-item.session:hover .side-item-del {
+  opacity: 1;
+}
+
 .session-view {
   display: grid;
   grid-template-columns: 1fr 300px;

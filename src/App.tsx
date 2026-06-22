@@ -8,7 +8,12 @@ import {
 } from './screens/RecallScreen.js';
 import { CardPage } from './components/CardPage.js';
 import { Sidebar } from './components/Sidebar.js';
-import { listActiveSessions, type Session, type Card } from './api/client.js';
+import {
+  listActiveSessions,
+  deleteSession,
+  type Session,
+  type Card,
+} from './api/client.js';
 
 // What the main area shows. Sessions persist in the sidebar; the main area
 // foregrounds one of them or a standalone view (new, cards, recall, a card).
@@ -68,6 +73,22 @@ export function App() {
     setView({ kind: 'card', id: card.id, fromRecall: false });
   }
 
+  // Discard an open session from the workspace.
+  async function removeSession(id: string) {
+    if (!window.confirm('このセッションを削除しますか? (元に戻せません)')) {
+      return;
+    }
+    try {
+      await deleteSession(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    const next = openSessions.filter(s => s.id !== id);
+    setOpenSessions(next);
+    if (activeSessionId === id) setActiveSessionId(next[0]?.id ?? null);
+  }
+
   function openCard(id: string, fromRecall: boolean) {
     setReturnView(view);
     setView({ kind: 'card', id, fromRecall });
@@ -91,6 +112,7 @@ export function App() {
           activeSessionId={view.kind === 'session' ? activeSessionId : null}
           view={view.kind}
           onSelectSession={foreground}
+          onDeleteSession={removeSession}
           onNew={() => setView({ kind: 'new' })}
           onCards={() => setView({ kind: 'cards' })}
           onRecall={() => setView({ kind: 'recall' })}

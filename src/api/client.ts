@@ -196,6 +196,11 @@ export function getSession(
   return request(`/api/sessions/${sessionId}`);
 }
 
+// Discard an open session from the workspace.
+export function deleteSession(sessionId: string): Promise<{ ok: true }> {
+  return request(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+}
+
 // Ambient recall for the current conversation: related cards with no reason
 // text. Runs after each Co-listener turn.
 export function relatedToSession(sessionId: string): Promise<Card[]> {

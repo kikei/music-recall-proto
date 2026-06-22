@@ -7,6 +7,7 @@ export function Sidebar({
   activeSessionId,
   view,
   onSelectSession,
+  onDeleteSession,
   onNew,
   onCards,
   onRecall,
@@ -15,6 +16,7 @@ export function Sidebar({
   activeSessionId: string | null;
   view: string;
   onSelectSession: (id: string) => void;
+  onDeleteSession: (id: string) => void;
   onNew: () => void;
   onCards: () => void;
   onRecall: () => void;
@@ -25,21 +27,46 @@ export function Sidebar({
         <h1>音楽想起エンジン</h1>
         <p className="tagline">音楽を保存せず、再会を予約する。</p>
       </div>
+      <nav className="side-section">
+        <button
+          className={view === 'recall' ? 'side-item active' : 'side-item'}
+          onClick={onRecall}
+        >
+          想起
+        </button>
+        <button
+          className={view === 'cards' ? 'side-item active' : 'side-item'}
+          onClick={onCards}
+        >
+          カード一覧
+        </button>
+      </nav>
       <div className="side-section">
         <div className="side-head">セッション</div>
         {sessions.map(s => (
-          <button
+          <div
             key={s.id}
             className={
               view === 'session' && s.id === activeSessionId
-                ? 'side-item active'
-                : 'side-item'
+                ? 'side-item session active'
+                : 'side-item session'
             }
-            onClick={() => onSelectSession(s.id)}
           >
-            <span className="side-item-title">{s.title}</span>
-            <span className="side-item-sub">{s.artist}</span>
-          </button>
+            <button
+              className="side-item-main"
+              onClick={() => onSelectSession(s.id)}
+              title={`${s.title} / ${s.artist}`}
+            >
+              {s.title}
+            </button>
+            <button
+              className="side-item-del"
+              onClick={() => onDeleteSession(s.id)}
+              title="このセッションを削除"
+            >
+              ✕
+            </button>
+          </div>
         ))}
         <button
           className={view === 'new' ? 'side-item add active' : 'side-item add'}
@@ -48,20 +75,6 @@ export function Sidebar({
           ＋ 新しいセッション
         </button>
       </div>
-      <nav className="side-section">
-        <button
-          className={view === 'cards' ? 'side-item active' : 'side-item'}
-          onClick={onCards}
-        >
-          カード一覧
-        </button>
-        <button
-          className={view === 'recall' ? 'side-item active' : 'side-item'}
-          onClick={onRecall}
-        >
-          想起
-        </button>
-      </nav>
     </aside>
   );
 }

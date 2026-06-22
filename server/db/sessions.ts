@@ -56,3 +56,10 @@ export function listActiveSessions(): Session[] {
 export function closeSession(id: string): void {
   db.prepare("UPDATE sessions SET status = 'closed' WHERE id = ?").run(id);
 }
+
+// Discard an open session and its messages. Used for sessions not yet turned
+// into a card (no card references them).
+export function deleteSession(id: string): void {
+  db.prepare('DELETE FROM messages WHERE session_id = ?').run(id);
+  db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+}

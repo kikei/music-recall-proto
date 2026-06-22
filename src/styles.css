@@ -23,9 +23,163 @@ body {
 }
 
 .app {
-  max-width: 720px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 24px 16px 64px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.side-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.side-head {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.side-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.side-item:hover {
+  background: var(--panel);
+}
+
+.side-item.active {
+  background: var(--panel);
+  border-color: var(--accent);
+}
+
+.side-item-title {
+  font-size: 14px;
+}
+
+.side-item-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.side-item.add {
+  color: var(--accent);
+}
+
+.session-view {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 28px;
+  align-items: start;
+}
+
+.conversation {
+  min-width: 0;
+}
+
+.related-rail {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rail-head {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.rail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.rail-card-title {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.rail-card-title:hover {
+  color: var(--accent);
+}
+
+.page-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.page-bar button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0;
+  cursor: pointer;
+}
+
+.page-bar-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.page-bar .danger {
+  color: #e08a8a;
+}
+
+@media (max-width: 860px) {
+  .workspace,
+  .session-view {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .related-rail {
+    position: static;
+  }
 }
 
 .header h1 {

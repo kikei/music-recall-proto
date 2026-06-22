@@ -44,11 +44,11 @@ export function getSession(id: string): Session | undefined {
     | undefined;
 }
 
-// Open sessions for the workspace sidebar, oldest first.
+// Open sessions for the workspace sidebar, newest first.
 export function listActiveSessions(): Session[] {
   return db
     .prepare(
-      "SELECT * FROM sessions WHERE status = 'active' ORDER BY created_at ASC"
+      "SELECT * FROM sessions WHERE status = 'active' ORDER BY created_at DESC"
     )
     .all() as Session[];
 }

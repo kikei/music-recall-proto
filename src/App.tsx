@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SessionView } from './screens/SessionScreen.js';
 import { StartSessionForm } from './screens/StartSessionForm.js';
 import { CardsScreen } from './screens/CardsScreen.js';
@@ -11,17 +11,27 @@ import { Sidebar } from './components/Sidebar.js';
 import {
   listActiveSessions,
   deleteSession,
+  listCards,
   type Session,
   type Card,
 } from './api/client.js';
 
+// How many recent cards the sidebar shows.
+const RECENT_CARDS = 6;
+
 // What the main area shows. Sessions persist in the sidebar; the main area
 // foregrounds one of them or a standalone view (new, cards, recall, a card).
+// A recall carries a nonce so resubmitting the same cue re-runs it.
 type MainView =
   | { kind: 'session' }
   | { kind: 'new' }
   | { kind: 'cards' }
-  | { kind: 'recall'; from?: RecallFromCardRequest }
+  | {
+      kind: 'recall';
+      query?: string;
+      from?: RecallFromCardRequest;
+      nonce: number;
+    }
   | { kind: 'card'; id: string; fromRecall: boolean };
 
 export function App() {
@@ -29,10 +39,12 @@ export function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [view, setView] = useState<MainView>({ kind: 'session' });
   const [returnView, setReturnView] = useState<MainView>({ kind: 'cards' });
+  const [recentCards, setRecentCards] = useState<Card[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
   const [error, setError] = useState('');
+  const recallSeq = useRef(0);
 
-  // Restore the open sessions on load and foreground the first one.
+  // Restore the open sessions on load and foreground the newest one.
   useEffect(() => {
     (async () => {
       try {
@@ -50,15 +62,38 @@ export function App() {
     })();
   }, []);
 
+  // Keep the sidebar's recent-cards list fresh as cards change.
+  useEffect(() => {
+    listCards()
+      .then(cards =>
+        setRecentCards(
+          [...cards]
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .slice(0, RECENT_CARDS)
+        )
+      )
+      .catch(() => {});
+  }, [dataVersion]);
+
   function foreground(id: string) {
     setActiveSessionId(id);
     setView({ kind: 'session' });
   }
 
+  // Clicking the title returns to the landing view.
+  function goHome() {
+    if (openSessions.length > 0) {
+      setActiveSessionId(openSessions[0].id);
+      setView({ kind: 'session' });
+    } else {
+      setView({ kind: 'new' });
+    }
+  }
+
   // A new (or continued) session was started: add it and foreground it.
   function started(session: Session) {
     setOpenSessions(prev =>
-      prev.some(s => s.id === session.id) ? prev : [...prev, session]
+      prev.some(s => s.id === session.id) ? prev : [session, ...prev]
     );
     setActiveSessionId(session.id);
     setView({ kind: 'session' });
@@ -89,6 +124,23 @@ export function App() {
     if (activeSessionId === id) setActiveSessionId(next[0]?.id ?? null);
   }
 
+  // Manual recall from the sidebar input.
+  function runRecall(query: string) {
+    const text = query.trim();
+    if (!text) return;
+    recallSeq.current += 1;
+    setView({ kind: 'recall', query: text, nonce: recallSeq.current });
+  }
+
+  function recallFromCard(card: Card) {
+    recallSeq.current += 1;
+    setView({
+      kind: 'recall',
+      from: { cardId: card.id, title: card.title, artist: card.artist },
+      nonce: recallSeq.current,
+    });
+  }
+
   function openCard(id: string, fromRecall: boolean) {
     setReturnView(view);
     setView({ kind: 'card', id, fromRecall });
@@ -99,11 +151,6 @@ export function App() {
     setView(returnView);
   }
 
-  const consumeRecallFrom = useCallback(
-    () => setView(v => (v.kind === 'recall' ? { kind: 'recall' } : v)),
-    []
-  );
-
   return (
     <div className="app">
       <div className="workspace">
@@ -111,11 +158,14 @@ export function App() {
           sessions={openSessions}
           activeSessionId={view.kind === 'session' ? activeSessionId : null}
           view={view.kind}
+          recentCards={recentCards}
+          onHome={goHome}
           onSelectSession={foreground}
           onDeleteSession={removeSession}
+          onOpenCard={id => openCard(id, false)}
           onNew={() => setView({ kind: 'new' })}
           onCards={() => setView({ kind: 'cards' })}
-          onRecall={() => setView({ kind: 'recall' })}
+          onRecall={runRecall}
         />
         <main className="main">
           {error && <p className="error">{error}</p>}
@@ -136,9 +186,10 @@ export function App() {
           )}
           {view.kind === 'recall' && (
             <RecallScreen
-              onOpenCard={openCard}
+              key={view.nonce}
+              query={view.query ?? null}
               fromCard={view.from ?? null}
-              onFromCardConsumed={consumeRecallFrom}
+              onOpenCard={openCard}
             />
           )}
           {view.kind === 'card' && (
@@ -147,16 +198,7 @@ export function App() {
               fromRecall={view.fromRecall}
               onClose={closeCard}
               onStarted={started}
-              onRecallFromCard={card =>
-                setView({
-                  kind: 'recall',
-                  from: {
-                    cardId: card.id,
-                    title: card.title,
-                    artist: card.artist,
-                  },
-                })
-              }
+              onRecallFromCard={recallFromCard}
             />
           )}
         </main>

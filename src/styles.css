@@ -23,7 +23,7 @@ body {
 }
 
 .app {
-  max-width: 1140px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 24px 16px 64px;
 }
@@ -40,13 +40,44 @@ body {
   top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
-.brand h1 {
-  margin: 0;
+.brand {
+  height: 40px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand-home {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink);
   font-size: 18px;
+  font-weight: 600;
+  line-height: 40px;
   letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.side-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-card:hover {
+  background: var(--panel);
 }
 
 .side-section {
@@ -61,6 +92,23 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 2px;
+}
+
+.recall-input {
+  min-height: 60px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.recall-go {
+  align-self: flex-end;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
 }
 
 .side-item {
@@ -95,6 +143,30 @@ body {
 }
 
 .side-item.add {
+  color: var(--accent);
+  border: 1px dashed var(--line);
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.side-artist {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.side-more {
+  background: none;
+  border: none;
+  text-align: right;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.side-more:hover,
+.side-more.active {
   color: var(--accent);
 }
 
@@ -137,7 +209,7 @@ body {
 
 .session-view {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 320px;
   gap: 28px;
   align-items: start;
 }
@@ -155,9 +227,32 @@ body {
 }
 
 .rail-head {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border-bottom: 1px solid var(--line);
   color: var(--accent);
   font-size: 12px;
   letter-spacing: 0.05em;
+}
+
+.rail-back {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rail-detail-link {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 4px 0 0;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .rail-card {
@@ -311,11 +406,13 @@ button.primary {
 }
 
 .track-header {
-  padding: 10px 14px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  margin-bottom: 12px;
+  height: 40px;
+  line-height: 40px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-log {
@@ -528,6 +625,10 @@ button.primary {
 
 .player-compact {
   margin-top: 10px;
+}
+
+.embed-spotify.embed-compact {
+  max-width: 320px;
 }
 
 .embed-spotify.embed-compact iframe {

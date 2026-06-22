@@ -8,7 +8,7 @@ export function RelatedRail({
   onOpen,
 }: {
   related: Card[] | null;
-  onOpen: (cardId: string) => void;
+  onOpen: (card: Card) => void;
 }) {
   return (
     <aside className="related-rail">
@@ -19,7 +19,7 @@ export function RelatedRail({
       {related &&
         related.map(card => (
           <div key={card.id} className="rail-card">
-            <button className="rail-card-title" onClick={() => onOpen(card.id)}>
+            <button className="rail-card-title" onClick={() => onOpen(card)}>
               {card.title} <span className="card-artist">/ {card.artist}</span>
             </button>
             {card.player && <PlayerEmbed player={card.player} compact />}

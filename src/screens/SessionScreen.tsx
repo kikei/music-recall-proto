@@ -5,6 +5,7 @@ import {
   research,
   makeCard,
   relatedToSession,
+  recallHit,
   type Session,
   type ChatMessage,
   type Card,
@@ -12,6 +13,8 @@ import {
 import { RichText } from '../components/RichText.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
 import { RelatedRail } from '../components/RelatedRail.js';
+import { CardView } from '../components/CardView.js';
+import { PlayerEmbed } from '../components/PlayerEmbed.js';
 
 // The foreground session: the conversation with the Co-listener plus an ambient
 // recall rail that updates after each Co-listener turn.
@@ -27,9 +30,17 @@ export function SessionView({
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [related, setRelated] = useState<Card[] | null>(null);
+  const [selected, setSelected] = useState<Card | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // Open a recalled card inline (keeping the session), bumping its reference
+  // count like any recall hit.
+  function openRelated(card: Card) {
+    recallHit(card.id).catch(() => {});
+    setSelected(card);
+  }
 
   // Load the session and its conversation, then fetch ambient related cards.
   useEffect(() => {
@@ -130,7 +141,25 @@ export function SessionView({
           聴き終えた → 再会カードにする
         </button>
       </section>
-      <RelatedRail related={related} onOpen={id => onOpenCard(id, true)} />
+      {selected ? (
+        <aside className="related-rail">
+          <div className="rail-head">
+            <button className="rail-back" onClick={() => setSelected(null)}>
+              ← 想起へ戻る
+            </button>
+          </div>
+          <CardView card={selected} />
+          {selected.player && <PlayerEmbed player={selected.player} compact />}
+          <button
+            className="rail-detail-link"
+            onClick={() => onOpenCard(selected.id, true)}
+          >
+            詳細ページを開く
+          </button>
+        </aside>
+      ) : (
+        <RelatedRail related={related} onOpen={openRelated} />
+      )}
     </div>
   );
 }

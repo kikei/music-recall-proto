@@ -38,7 +38,7 @@ export function CardView({
         <span>想起から {card.recall_count} 回参照</span>
         {metaAction && <span className="meta-action">{metaAction}</span>}
       </div>
-      {card.session_id && <Transcript cardId={card.id} />}
+      {card.session_id && <Transcript key={card.id} cardId={card.id} />}
       {children}
     </article>
   );

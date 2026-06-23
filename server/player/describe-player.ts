@@ -2,6 +2,7 @@ import type { Player } from './provider.js';
 import { spotifyLookup } from './spotify.js';
 import { youtubeLookup } from './youtube.js';
 import { niconicoLookup } from './niconico.js';
+import { appleLookup } from './apple.js';
 
 export interface PlayerMeta {
   title: string;
@@ -22,6 +23,13 @@ export async function describePlayer(
     const meta = await niconicoLookup(player.id);
     if (!meta) return null;
     return { title: meta.title, artist: meta.author };
+  }
+  if (player.provider === 'apple') {
+    // Playlists (pl.*) are not in the keyless lookup API; leave to manual entry.
+    if (player.kind === 'playlist') return null;
+    const lookupId =
+      player.kind === 'album' && player.track ? player.track : player.id;
+    return appleLookup(player.storefront, lookupId);
   }
   const meta = await youtubeLookup(player.id);
   if (!meta) return null;

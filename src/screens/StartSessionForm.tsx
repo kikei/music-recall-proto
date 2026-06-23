@@ -74,7 +74,7 @@ export function StartSessionForm({
           <label className="field">
             <span className="field-label">視聴 URL (任意)</span>
             <input
-              placeholder="Spotify / YouTube / ニコニコ動画 を貼ると検索せず使います"
+              placeholder="Spotify / Apple Music / YouTube / Niconico を貼ると検索せず使います"
               value={playerUrl}
               onChange={e => setPlayerUrl(e.target.value)}
             />

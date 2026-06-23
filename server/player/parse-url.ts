@@ -51,5 +51,29 @@ export function parsePlayerUrl(raw: string | undefined | null): Player | null {
     return id ? { provider: 'niconico', id } : null;
   }
 
+  if (host === 'music.apple.com' || host === 'beta.music.apple.com') {
+    return parseAppleUrl(url);
+  }
+
   return null;
+}
+
+const APPLE_TYPES = new Set(['album', 'song', 'playlist']);
+
+// Apple Music: /{storefront}/{album|song|playlist}/{slug}/{id}. A track inside
+// an album page is the album URL with ?i={trackId}.
+function parseAppleUrl(url: URL): Player | null {
+  const parts = url.pathname.split('/').filter(Boolean);
+  const ti = parts.findIndex(p => APPLE_TYPES.has(p));
+  if (ti < 0) return null;
+  const kind = parts[ti] as 'album' | 'song' | 'playlist';
+  const storefront = ti >= 1 ? parts[ti - 1] : 'us';
+  const id = parts[parts.length - 1];
+  if (!id || APPLE_TYPES.has(id)) return null;
+  if (kind === 'album') {
+    const track = url.searchParams.get('i');
+    const base = { provider: 'apple' as const, storefront, kind, id };
+    return track ? { ...base, track } : base;
+  }
+  return { provider: 'apple', storefront, kind, id };
 }

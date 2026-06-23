@@ -62,11 +62,11 @@ export function CardEditForm({
         />
       </label>
       <label className="field">
-        <span>プレイヤー URL (Spotify / YouTube)</span>
+        <span>プレイヤー URL (Spotify / Apple Music / YouTube / Niconico)</span>
         <input
           value={playerUrl}
           onChange={e => setPlayerUrl(e.target.value)}
-          placeholder="Spotify / YouTube の URL を貼り付け (空にすると削除)"
+          placeholder="Spotify / Apple Music / YouTube / Niconico の URL を貼り付け (空にすると削除)"
         />
       </label>
       {error && <p className="error">{error}</p>}

@@ -19,7 +19,14 @@ export interface ChatMessage {
 export type Player =
   | { provider: 'spotify'; kind: 'album' | 'track' | 'playlist'; id: string }
   | { provider: 'youtube'; id: string }
-  | { provider: 'niconico'; id: string };
+  | { provider: 'niconico'; id: string }
+  | {
+      provider: 'apple';
+      storefront: string;
+      kind: 'album' | 'song' | 'playlist';
+      id: string;
+      track?: string;
+    };
 
 export interface Card {
   id: string;
@@ -166,6 +173,12 @@ export function playerToUrl(player: Player | null): string {
   }
   if (player.provider === 'youtube') {
     return `https://www.youtube.com/watch?v=${player.id}`;
+  }
+  if (player.provider === 'apple') {
+    const path = `${player.storefront}/${player.kind}/_/${player.id}`;
+    const query =
+      player.kind === 'album' && player.track ? `?i=${player.track}` : '';
+    return `https://music.apple.com/${path}${query}`;
   }
   return `https://www.nicovideo.jp/watch/${player.id}`;
 }

@@ -29,6 +29,7 @@ type MainView =
   | {
       kind: 'recall';
       query?: string;
+      direction?: string;
       from?: RecallFromCardRequest;
       nonce: number;
     }
@@ -132,11 +133,14 @@ export function App() {
     setView({ kind: 'recall', query: text, nonce: recallSeq.current });
   }
 
-  function recallFromCard(card: Card) {
+  // Recall from a card's detail view. `direction` steers it (e.g. toward
+  // "ジャズっぽいもの"); it is optional.
+  function recallFromCard(card: Card, direction = '') {
     recallSeq.current += 1;
     setView({
       kind: 'recall',
       from: { cardId: card.id, title: card.title, artist: card.artist },
+      direction: direction.trim() || undefined,
       nonce: recallSeq.current,
     });
   }
@@ -188,6 +192,7 @@ export function App() {
             <RecallScreen
               key={view.nonce}
               query={view.query ?? null}
+              direction={view.direction ?? null}
               fromCard={view.from ?? null}
               onOpenCard={openCard}
             />

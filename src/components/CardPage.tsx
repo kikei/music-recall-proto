@@ -26,10 +26,11 @@ export function CardPage({
   fromRecall: boolean;
   onClose: () => void;
   onStarted: (session: Session) => void;
-  onRecallFromCard: (card: Card) => void;
+  onRecallFromCard: (card: Card, direction: string) => void;
 }) {
   const [card, setCard] = useState<Card | null>(null);
   const [editing, setEditing] = useState(false);
+  const [direction, setDirection] = useState('');
   const [impression, setImpression] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -117,12 +118,23 @@ export function CardPage({
           <CardView
             card={card}
             metaAction={
-              <button
-                className="recall-btn"
-                onClick={() => onRecallFromCard(card)}
-              >
-                ↻ 想起
-              </button>
+              <span className="recall-action">
+                <input
+                  className="recall-dir"
+                  placeholder="方向 (例: ジャズっぽいもの)"
+                  value={direction}
+                  onChange={e => setDirection(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') onRecallFromCard(card, direction);
+                  }}
+                />
+                <button
+                  className="recall-btn"
+                  onClick={() => onRecallFromCard(card, direction)}
+                >
+                  ↻ 想起
+                </button>
+              </span>
             }
           />
           {card.player && <PlayerEmbed player={card.player} />}

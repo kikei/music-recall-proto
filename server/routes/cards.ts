@@ -41,11 +41,13 @@ cards.delete('/:id', c => {
   return c.json({ ok: true });
 });
 
-// Recall starting from this card.
+// Recall starting from this card. An optional `direction` steers the recall.
 cards.post('/:id/recall', async c => {
   const card = getCard(c.req.param('id'));
   if (!card) return c.json({ error: 'not found' }, 404);
-  return c.json(await recallFromCard(card.id));
+  const { direction } = await c.req.json().catch(() => ({}));
+  const steer = typeof direction === 'string' ? direction.trim() : '';
+  return c.json(await recallFromCard(card.id, steer || undefined));
 });
 
 // Increment the reference count when the detail is opened from a recall result.

@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createSession, lookupPlayer, type Session } from '../api/client.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
+import { PlayerEmbed } from '../components/PlayerEmbed.js';
+import { parsePlayerUrl } from '../player/parse-url.js';
 
 // Start a new listening session. Pasting a viewing URL fills the target and
 // artist from metadata, so they can be omitted.
@@ -61,37 +63,58 @@ export function StartSessionForm({
   // Pasting a URL lets you omit title/artist (filled from metadata).
   const ready = !!playerUrl.trim() || (!!title && !!artist);
 
+  // Preview the embed as soon as the URL is a recognizable player link.
+  const player = useMemo(() => parsePlayerUrl(playerUrl), [playerUrl]);
+
   return (
     <section className="start-form">
-      <p className="lead">
-        今から聴く対象を教えてください。Spotify / YouTube / ニコニコ動画の URL
-        を貼れば、対象とアーティストは省略できます。
-      </p>
-      <input
-        placeholder="視聴 URL (任意): Spotify / YouTube / ニコニコ動画 を貼ると検索せず使います"
-        value={playerUrl}
-        onChange={e => setPlayerUrl(e.target.value)}
-      />
-      {looking && <p className="hint">URL から対象を取得しています…</p>}
-      <input
-        placeholder="対象 (例: Kid A / Idioteque / ○○のライブ盤)"
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-      />
-      <input
-        placeholder="アーティスト"
-        value={artist}
-        onChange={e => setArtist(e.target.value)}
-      />
-      <AutoTextarea
-        placeholder="メモ (任意): まず自分の言葉で第一印象を書いてみる"
-        value={memo}
-        onChange={e => setMemo(e.target.value)}
-      />
-      {error && <p className="error">{error}</p>}
-      <button className="primary" disabled={busy || !ready} onClick={start}>
-        {busy ? '作品を調べています…' : 'セッションを始める'}
-      </button>
+      <p className="lead">今から聴く対象を教えてください。</p>
+      <div className={player ? 'start-grid has-preview' : 'start-grid'}>
+        <div className="start-fields">
+          <label className="field">
+            <span className="field-label">視聴 URL (任意)</span>
+            <input
+              placeholder="Spotify / YouTube / ニコニコ動画 を貼ると検索せず使います"
+              value={playerUrl}
+              onChange={e => setPlayerUrl(e.target.value)}
+            />
+          </label>
+          {looking && <p className="hint">URL から対象を取得しています…</p>}
+          <label className="field">
+            <span className="field-label">対象</span>
+            <input
+              placeholder="例: Kid A / Idioteque / ○○のライブ盤"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">アーティスト</span>
+            <input
+              placeholder="例: Radiohead"
+              value={artist}
+              onChange={e => setArtist(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">メモ (任意)</span>
+            <AutoTextarea
+              placeholder="まず自分の言葉で第一印象を書いてみる"
+              value={memo}
+              onChange={e => setMemo(e.target.value)}
+            />
+          </label>
+          {error && <p className="error">{error}</p>}
+          <button className="primary" disabled={busy || !ready} onClick={start}>
+            {busy ? '作品を調べています…' : 'セッションを始める'}
+          </button>
+        </div>
+        {player && (
+          <div className="start-preview">
+            <PlayerEmbed player={player} compact />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -12,10 +12,12 @@ export interface RecallFromCardRequest {
 // search and shows the outcome. App remounts it (via a nonce key) per request.
 export function RecallScreen({
   query,
+  direction,
   fromCard,
   onOpenCard,
 }: {
   query: string | null;
+  direction: string | null;
   fromCard: RecallFromCardRequest | null;
   onOpenCard: (cardId: string, fromRecall: boolean) => void;
 }) {
@@ -27,7 +29,7 @@ export function RecallScreen({
 
   useEffect(() => {
     const job = fromCard
-      ? recallFromCard(fromCard.cardId)
+      ? recallFromCard(fromCard.cardId, direction ?? undefined)
       : recall(query ?? '');
     job
       .then(setResults)
@@ -39,7 +41,12 @@ export function RecallScreen({
 
   return (
     <section className="recall">
-      {source && <p className="recall-source">「{source}」からの想起</p>}
+      {source && (
+        <p className="recall-source">
+          「{source}」からの想起
+          {direction && <span> (方向: {direction})</span>}
+        </p>
+      )}
       {busy && <p className="hint">想起中…</p>}
       {error && <p className="error">{error}</p>}
       {results && results.length === 0 && (

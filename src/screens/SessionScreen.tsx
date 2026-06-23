@@ -158,7 +158,11 @@ export function SessionView({
           </button>
         </aside>
       ) : (
-        <RelatedRail related={related} onOpen={openRelated} />
+        <RelatedRail
+          related={related}
+          sessionPlayer={session.player}
+          onOpen={openRelated}
+        />
       )}
     </div>
   );

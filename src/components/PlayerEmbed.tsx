@@ -38,6 +38,41 @@ export function PlayerEmbed({
     );
   }
 
+  if (player.provider === 'apple') {
+    const path = `${player.storefront}/${player.kind}/_/${player.id}`;
+    const query =
+      player.kind === 'album' && player.track ? `?i=${player.track}` : '';
+    const embedClass = compact
+      ? 'embed embed-apple embed-compact'
+      : 'embed embed-apple';
+    const fullHeight = player.kind === 'song' ? 175 : 450;
+    return (
+      <div className={wrap}>
+        <div className={embedClass}>
+          <iframe
+            src={`https://embed.music.apple.com/${path}${query}`}
+            height={compact ? 175 : fullHeight}
+            loading="lazy"
+            allow="autoplay *; encrypted-media *; clipboard-write"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+            allowFullScreen
+          />
+        </div>
+        {!compact && (
+          <p>
+            <a
+              href={`https://music.apple.com/${path}${query}`}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Apple Music で開く
+            </a>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   const embedClass = compact
     ? 'embed embed-video embed-compact'
     : 'embed embed-video';

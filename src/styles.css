@@ -663,6 +663,10 @@ button.primary {
   max-width: 320px;
 }
 
+.embed-apple.embed-compact {
+  max-width: 320px;
+}
+
 .reengage {
   margin-top: 20px;
   border-top: 1px solid var(--line);

@@ -32,7 +32,8 @@ const SHOW = 3;
 async function recallByVector(
   queryText: string,
   queryVector: number[],
-  excludeId?: string
+  excludeId?: string,
+  direction?: string
 ): Promise<RecallResult[]> {
   const cards = listCards().filter(c => c.embedding && c.id !== excludeId);
   if (cards.length === 0) return [];
@@ -55,7 +56,8 @@ async function recallByVector(
       hook: card.hook,
       recall_phrase: card.recall_phrase,
       background: card.background,
-    }))
+    })),
+    direction
   );
 
   const byId = new Map(pool.map(card => [card.id, card]));
@@ -92,11 +94,19 @@ export async function recall(query: string): Promise<RecallResult[]> {
   return recallByVector(query, queryVector, undefined);
 }
 
-// Recall starting from a single card, reusing its stored embedding.
-export async function recallFromCard(cardId: string): Promise<RecallResult[]> {
+// Recall starting from a single card. `direction` steers the recall toward a
+// kind of music (e.g. "ジャズっぽいもの"). Without it, the card's stored
+// embedding is reused; with it, re-embed the card text plus the direction so
+// the candidate pool also leans that way, and the LLM rerank is steered too.
+export async function recallFromCard(
+  cardId: string,
+  direction?: string
+): Promise<RecallResult[]> {
   const card = getCard(cardId);
   if (!card?.embedding) return [];
-  const queryVector = JSON.parse(card.embedding) as number[];
   const queryText = cardEmbeddingText(card);
-  return recallByVector(queryText, queryVector, card.id);
+  const queryVector = direction
+    ? await embed(`${queryText}\n方向性: ${direction}`)
+    : (JSON.parse(card.embedding) as number[]);
+  return recallByVector(queryText, queryVector, card.id, direction);
 }

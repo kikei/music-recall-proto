@@ -15,6 +15,7 @@ import {
 } from '../llm/chat.js';
 import { createCardFromSession } from '../cards/from-session.js';
 import { cardToClient } from '../cards/to-client.js';
+import { sessionToClient } from '../sessions/to-client.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
 import { describePlayer } from '../player/describe-player.js';
 import type { Player } from '../player/provider.js';
@@ -22,7 +23,7 @@ import type { Player } from '../player/provider.js';
 export const sessions = new Hono();
 
 // Open sessions for the workspace sidebar.
-sessions.get('/', c => c.json(listActiveSessions()));
+sessions.get('/', c => c.json(listActiveSessions().map(sessionToClient)));
 
 // Decide the title and artist from the input and the pasted URL. If either is
 // empty but a URL is present, fill it from the dedicated API metadata. Returns
@@ -108,13 +109,19 @@ sessions.post('/', async c => {
       : await openingMessage(chatWork, true);
   addMessage(session.id, 'assistant', opening);
 
-  return c.json({ session, messages: listMessages(session.id) });
+  return c.json({
+    session: sessionToClient(session),
+    messages: listMessages(session.id),
+  });
 });
 
 sessions.get('/:id', c => {
   const session = getSession(c.req.param('id'));
   if (!session) return c.json({ error: 'not found' }, 404);
-  return c.json({ session, messages: listMessages(session.id) });
+  return c.json({
+    session: sessionToClient(session),
+    messages: listMessages(session.id),
+  });
 });
 
 // Discard an open session (and its messages) from the workspace.

@@ -236,6 +236,10 @@ body {
   letter-spacing: 0.05em;
 }
 
+.rail-player .player {
+  margin-top: 0;
+}
+
 .rail-back {
   background: none;
   border: none;
@@ -406,6 +410,10 @@ button.primary {
 }
 
 .track-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
   height: 40px;
   line-height: 40px;
   border-bottom: 1px solid var(--line);
@@ -569,7 +577,23 @@ button.primary {
   margin-left: auto;
 }
 
+.recall-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recall-dir {
+  width: 260px;
+  max-width: 100%;
+  margin-bottom: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
 .recall-btn {
+  flex: none;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
@@ -734,6 +758,46 @@ button.primary {
 
 .modal-bar .danger {
   color: #e08a8a;
+}
+
+.start-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.start-grid.has-preview {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.start-preview {
+  position: sticky;
+  top: 24px;
+}
+
+@media (max-width: 860px) {
+  .start-grid.has-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.start-form .field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.start-form .field-label {
+  display: block;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.start-form .field input,
+.start-form .field textarea {
+  margin-bottom: 0;
 }
 
 .card-edit .field {

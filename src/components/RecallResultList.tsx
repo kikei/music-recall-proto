@@ -2,7 +2,8 @@ import type { RecallResult } from '../api/client.js';
 import { PlayerEmbed } from './PlayerEmbed.js';
 
 // List of recall results. Click to open that card.
-// Show a minimal set (why recalled + target) and attach a small player.
+// Show a minimal set (why recalled + target) and the full player, matching
+// the reunion card detail view.
 export function RecallResultList({
   results,
   onOpen,
@@ -24,7 +25,7 @@ export function RecallResultList({
           </h3>
           {r.player && (
             <div onClick={e => e.stopPropagation()}>
-              <PlayerEmbed player={r.player} compact />
+              <PlayerEmbed player={r.player} />
             </div>
           )}
         </article>

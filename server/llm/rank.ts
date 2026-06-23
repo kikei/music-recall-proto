@@ -31,10 +31,12 @@ const system = `あなたは Co-listener で、ユーザーの隣で一緒に音
 "reason": string } ] }。関連すると判断したものだけを含めること。`;
 
 // Have the LLM select and reorder the embedding-gathered candidates by their
-// actual connection strength.
+// actual connection strength. `direction` (optional) steers the recall toward
+// a kind of music the user asked for (e.g. "ジャズっぽいもの").
 export async function rankRecall(
   query: string,
-  candidates: RecallCandidate[]
+  candidates: RecallCandidate[],
+  direction?: string
 ): Promise<RankedRecall[]> {
   const cards = candidates
     .map(
@@ -43,7 +45,12 @@ export async function rankRecall(
         `想起フレーズ: ${c.recall_phrase}\n背景: ${c.background}`
     )
     .join('\n---\n');
-  const user = `今のきっかけ:\n${query}\n\n=== 再会カード候補 ===\n${cards}`;
+  const steer = direction
+    ? `\n\n想起の方向性 (この方向に沿う候補をやや優先しつつ、きっかけとの` +
+      `接続を最優先する): ${direction}`
+    : '';
+  const user =
+    `今のきっかけ:\n${query}${steer}\n\n` + `=== 再会カード候補 ===\n${cards}`;
 
   const completion = await openai().chat.completions.create({
     model: rankModel,

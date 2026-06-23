@@ -4,6 +4,7 @@ export interface Session {
   artist: string;
   album: string | null;
   status: string;
+  player: Player | null;
   created_at: string;
 }
 
@@ -124,9 +125,16 @@ export function recallHit(cardId: string): Promise<{ recall_count: number }> {
   return request(`/api/cards/${cardId}/recall-hit`, { method: 'POST' });
 }
 
-// Recall other related cards starting from this card.
-export function recallFromCard(cardId: string): Promise<RecallResult[]> {
-  return request(`/api/cards/${cardId}/recall`, { method: 'POST' });
+// Recall other related cards starting from this card. `direction` steers the
+// recall toward a kind of music (optional).
+export function recallFromCard(
+  cardId: string,
+  direction?: string
+): Promise<RecallResult[]> {
+  return request(`/api/cards/${cardId}/recall`, {
+    method: 'POST',
+    body: JSON.stringify({ direction }),
+  });
 }
 
 export interface CardPatch {

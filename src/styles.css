@@ -14,6 +14,13 @@
   box-sizing: border-box;
 }
 
+/* Always reserve the scrollbar gutter so the centered layout never shifts
+   sideways when a view toggles the page scrollbar (which otherwise nudges the
+   sidebar, including the + icon, on view changes). */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -25,7 +32,7 @@ body {
 .app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  padding: 24px 16px;
 }
 
 .workspace {
@@ -35,16 +42,71 @@ body {
   align-items: start;
 }
 
+/* Bottom breathing room lives here (not on .app) so the sticky sidebar plus
+   the app's top/bottom padding fits the viewport exactly and never becomes the
+   tallest element forcing a page scroll. */
+.main {
+  min-width: 0;
+  padding-bottom: 40px;
+}
+
+/* The page scrolls normally; the sidebar stays pinned to the viewport while it
+   scrolls, and only its own list region scrolls internally. align-self: start
+   keeps the grid item from stretching to the row height, which would otherwise
+   leave sticky no room to travel. */
 .sidebar {
   position: sticky;
   top: 24px;
+  align-self: start;
+  height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* Not clipped: the inner .side-scroll handles its own scrolling, and clipping
+     here would cut off the + button's glow at the sidebar edge. */
+  overflow: visible;
 }
 
+/* The sessions and recent-cards sections share one scroll region that fills
+   the remaining height, keeping the recall input above and the "カード一覧"
+   link pinned below it. */
+.side-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.side-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.side-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+/* Keep rows at their natural height so the region scrolls instead of the
+   rows compressing. */
+.side-scroll .side-section,
+.side-card,
+.side-item {
+  flex-shrink: 0;
+}
+
+/* Brand row: the wordmark (home) on the left and a + to start a session on the
+   right, sharing the header rule. */
 .brand {
   height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -55,9 +117,142 @@ body {
   color: var(--ink);
   font-size: 18px;
   font-weight: 600;
-  line-height: 40px;
+  line-height: 1;
   letter-spacing: 0.04em;
   cursor: pointer;
+}
+
+/* New-session action: a quiet circular + that fills with the accent on hover or
+   while its view is active. */
+/* The + is drawn from two bars rather than a glyph so it stays exactly centered
+   in the circle and its stroke weight is controlled in px. */
+.brand-new {
+  position: relative;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  background: none;
+  color: var(--accent);
+  font-size: 0;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.brand-new::before,
+.brand-new::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  border-radius: 1px;
+  transform: translate(-50%, -50%);
+}
+
+.brand-new::before {
+  width: 13px;
+  height: 2.5px;
+}
+
+.brand-new::after {
+  width: 2.5px;
+  height: 13px;
+}
+
+/* The brand and the + trigger the same action, so hovering the wordmark lights
+   the + as if it were hovered itself. */
+.brand-home:hover ~ .brand-new,
+.brand-new:hover,
+.brand-new.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  /* Two offset, differently-blurred layers read as a soft, faintly doubled
+     glow with its core nudged off-center. */
+  box-shadow:
+    2px 3px 14px rgba(200, 162, 107, 0.45),
+    5px 7px 26px rgba(200, 162, 107, 0.3);
+  /* The glow throbs gently, like a tone ringing out. */
+  animation: brand-glow-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes brand-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      2px 3px 12px rgba(200, 162, 107, 0.4),
+      4px 6px 22px rgba(200, 162, 107, 0.24);
+  }
+  50% {
+    box-shadow:
+      2px 3px 20px rgba(200, 162, 107, 0.66),
+      7px 10px 36px rgba(200, 162, 107, 0.46);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-home:hover ~ .brand-new,
+  .brand-new:hover,
+  .brand-new.active {
+    animation: none;
+  }
+}
+
+.recall-input {
+  min-height: 60px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  transition: border-color 0.15s ease;
+}
+
+/* While the cue is empty, hovering "想起する" highlights the textarea to point
+   out that a cue has to be typed in first. */
+.side-recall:has(.recall-input:placeholder-shown):has(.recall-go:hover)
+  .recall-input {
+  border-color: var(--accent);
+}
+
+.recall-go {
+  align-self: flex-end;
+  margin: 0;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* The reaction is a glow only (no lift or brighten, which read as "pressable").
+   When the cue is empty the button stays muted, just lifting its opacity a touch
+   so the glow is visible; the cursor stays default so it doesn't invite a click
+   that would do nothing. */
+.recall-go:hover,
+.side-recall:has(.recall-input:placeholder-shown) .recall-go:hover {
+  box-shadow: 0 0 12px rgba(200, 162, 107, 0.5);
+}
+
+.side-recall:has(.recall-input:placeholder-shown) .recall-go:hover {
+  opacity: 0.75;
+}
+
+/* Muted until there is a cue to act on. */
+.side-recall:has(.recall-input:placeholder-shown) .recall-go {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .side-card {
@@ -80,6 +275,12 @@ body {
   background: var(--panel);
 }
 
+/* Mirrors the active-session highlight so an open card is marked the same way. */
+.side-card.active {
+  background: var(--panel);
+  border-color: var(--accent);
+}
+
 .side-section {
   display: flex;
   flex-direction: column;
@@ -92,23 +293,6 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 2px;
-}
-
-.recall-input {
-  min-height: 60px;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.recall-go {
-  align-self: flex-end;
-  padding: 4px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  border: 1px solid var(--accent);
 }
 
 .side-item {
@@ -142,14 +326,6 @@ body {
   color: var(--muted);
 }
 
-.side-item.add {
-  color: var(--accent);
-  border: 1px dashed var(--line);
-  text-align: center;
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-
 .side-artist {
   color: var(--muted);
   font-size: 12px;
@@ -163,9 +339,18 @@ body {
   color: var(--muted);
   font-size: 12px;
   cursor: pointer;
+  transition:
+    color 0.15s ease,
+    text-shadow 0.15s ease;
 }
 
-.side-more:hover,
+/* Right-aligned, so the text itself reacts: it shifts to the accent color and
+   gives off a faint glow rather than a full-width fill. */
+.side-more:hover {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(200, 162, 107, 0.55);
+}
+
 .side-more.active {
   color: var(--accent);
 }
@@ -283,26 +468,24 @@ body {
   color: var(--accent);
 }
 
-.page-bar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.page-bar button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  padding: 0;
-  cursor: pointer;
-}
-
-.page-bar-actions {
-  display: flex;
+/* Edit/delete ride in the sticky title bar, to the right of the work title. */
+.card-actions {
+  display: inline-flex;
+  flex-shrink: 0;
   gap: 16px;
 }
 
-.page-bar .danger {
+.card-actions button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.card-actions .danger {
   color: #e08a8a;
 }
 
@@ -315,6 +498,15 @@ body {
   .sidebar,
   .related-rail {
     position: static;
+  }
+
+  .sidebar {
+    height: auto;
+    overflow: visible;
+  }
+
+  .side-scroll {
+    overflow: visible;
   }
 }
 
@@ -409,9 +601,11 @@ button.primary {
   font-size: 14px;
 }
 
+/* Pinned at the same line as the sidebar brand and the card detail title
+   (top: 24px), with the box-shadow masking the 24px gap above it. */
 .track-header {
   position: sticky;
-  top: 0;
+  top: 24px;
   z-index: 5;
   background: var(--bg);
   height: 40px;
@@ -421,6 +615,22 @@ button.primary {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: 0 -24px 0 var(--bg);
+}
+
+/* Ends the session, below the conversation where it is reached after the talk.
+   An outline (not the gold "送る" fill), since it is a different kind of action
+   from sending a fragment. */
+.session-finish {
+  margin-top: 28px;
+  background: none;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.session-finish:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .chat-log {
@@ -465,10 +675,6 @@ button.primary {
   justify-content: flex-end;
 }
 
-.session-finish {
-  margin-top: 28px;
-}
-
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -480,6 +686,41 @@ button.primary {
 .card-target {
   margin: 0 0 10px;
   font-size: 17px;
+}
+
+/* The detail page drops the card's frame so the title can be a page-background
+   header band that lines up with the sidebar brand. */
+.card-page .card {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* Pin the work title to the same line as the sidebar brand (both at top: 24px)
+   so they stay aligned while scrolling, not just at rest. The box-shadow paints
+   the page background over the 24px above the band, so scrolling content can't
+   peek through the gap between the viewport top and the pinned title. */
+.card-page .card-target {
+  position: sticky;
+  top: 24px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 40px;
+  margin: 0 0 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 -24px 0 var(--bg);
+}
+
+.card-page .card-title-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .card-artist,

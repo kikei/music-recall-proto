@@ -91,17 +91,6 @@ export function CardPage({
 
   return (
     <div className="card-page">
-      <div className="page-bar">
-        <button onClick={onClose}>← 戻る</button>
-        {card && !editing && (
-          <span className="page-bar-actions">
-            <button onClick={() => setEditing(true)}>編集</button>
-            <button className="danger" disabled={busy} onClick={remove}>
-              削除
-            </button>
-          </span>
-        )}
-      </div>
       {error && <p className="error">{error}</p>}
       {card && editing && (
         <CardEditForm
@@ -117,6 +106,14 @@ export function CardPage({
         <>
           <CardView
             card={card}
+            titleAction={
+              <>
+                <button onClick={() => setEditing(true)}>編集</button>
+                <button className="danger" disabled={busy} onClick={remove}>
+                  削除
+                </button>
+              </>
+            }
             metaAction={
               <span className="recall-action">
                 <input

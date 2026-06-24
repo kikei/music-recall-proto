@@ -133,12 +133,8 @@ export function SessionView({
           onSend={send}
           onResearch={investigate}
         />
-        <button
-          className="primary session-finish"
-          disabled={busy}
-          onClick={finish}
-        >
-          聴き終えた → 再会カードにする
+        <button className="session-finish" disabled={busy} onClick={finish}>
+          セッションを終了する
         </button>
       </section>
       {selected ? (

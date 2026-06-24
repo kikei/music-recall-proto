@@ -17,7 +17,7 @@ import {
 } from './api/client.js';
 
 // How many recent cards the sidebar shows.
-const RECENT_CARDS = 6;
+const RECENT_CARDS = 14;
 
 // What the main area shows. Sessions persist in the sidebar; the main area
 // foregrounds one of them or a standalone view (new, cards, recall, a card).
@@ -45,18 +45,14 @@ export function App() {
   const [error, setError] = useState('');
   const recallSeq = useRef(0);
 
-  // Restore the open sessions on load and foreground the newest one.
+  // Restore the open sessions on load. The first view is always the new-session
+  // form; open sessions wait in the sidebar to be foregrounded on demand.
   useEffect(() => {
     (async () => {
       try {
         const list = await listActiveSessions();
         setOpenSessions(list);
-        if (list.length > 0) {
-          setActiveSessionId(list[0].id);
-          setView({ kind: 'session' });
-        } else {
-          setView({ kind: 'new' });
-        }
+        setView({ kind: 'new' });
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -81,14 +77,9 @@ export function App() {
     setView({ kind: 'session' });
   }
 
-  // Clicking the title returns to the landing view.
+  // Clicking the brand returns to the landing view (the new-session form).
   function goHome() {
-    if (openSessions.length > 0) {
-      setActiveSessionId(openSessions[0].id);
-      setView({ kind: 'session' });
-    } else {
-      setView({ kind: 'new' });
-    }
+    setView({ kind: 'new' });
   }
 
   // A new (or continued) session was started: add it and foreground it.
@@ -161,6 +152,7 @@ export function App() {
         <Sidebar
           sessions={openSessions}
           activeSessionId={view.kind === 'session' ? activeSessionId : null}
+          activeCardId={view.kind === 'card' ? view.id : null}
           view={view.kind}
           recentCards={recentCards}
           onHome={goHome}

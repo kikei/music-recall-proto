@@ -10,20 +10,25 @@ import { formatDateTime } from '../format/datetime.js';
 // Show the reunion card's four parts (target, hook, recall phrase, background).
 export function CardView({
   card,
+  titleAction,
   metaAction,
   children,
 }: {
   card: Card;
+  titleAction?: React.ReactNode;
   metaAction?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
     <article className="card">
       <h3 className="card-target">
-        {card.title} <span className="card-artist">/ {card.artist}</span>
-        {card.album ? (
-          <span className="card-album"> ({card.album})</span>
-        ) : null}
+        <span className="card-title-text">
+          {card.title} <span className="card-artist">/ {card.artist}</span>
+          {card.album ? (
+            <span className="card-album"> ({card.album})</span>
+          ) : null}
+        </span>
+        {titleAction && <span className="card-actions">{titleAction}</span>}
       </h3>
       <dl className="card-fields">
         <dt>引っかかり</dt>

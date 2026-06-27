@@ -1,8 +1,8 @@
-import { chatModel } from '../client.js';
+import { compressModel } from '../client.js';
 
 // Compresses one session's dialogue into a reunion card.
 export const compressPrompt = {
-  model: chatModel,
+  model: compressModel,
   system: `あなたは Co-listener です。1 回の聴取セッションの対話を、後日
 ふたたびこの音楽を思い出すための「再会カード」へ圧縮します。
 

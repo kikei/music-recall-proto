@@ -1,8 +1,8 @@
-import { rankModel } from '../client.js';
+import { expandModel } from '../client.js';
 
 // Expands a free-text cue into mood/atmosphere words before recall retrieval.
 export const expandPrompt = {
-  model: rankModel,
+  model: expandModel,
   system: `これから聴く音楽の状況や気分を表す短い言葉を、検索用の印象語へ
 広げます。
 

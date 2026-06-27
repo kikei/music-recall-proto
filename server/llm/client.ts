@@ -21,5 +21,13 @@ export const chatModel = process.env.OPENAI_MODEL ?? 'gpt-5.5';
 // fast model instead of the heavy dialogue model.
 export const rankModel = process.env.RANK_MODEL ?? 'gpt-4o-mini';
 
+// Compressing a session into a card defaults to the dialogue model but can be
+// set independently.
+export const compressModel = process.env.COMPRESS_MODEL ?? chatModel;
+
+// Expanding a recall cue into mood words defaults to the fast model but can be
+// set independently.
+export const expandModel = process.env.EXPAND_MODEL ?? rankModel;
+
 export const embedModel =
   process.env.OPENAI_EMBED_MODEL ?? 'text-embedding-3-small';

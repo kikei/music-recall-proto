@@ -2,6 +2,7 @@ import { listCards, getCard, type Card } from '../db/cards.js';
 import { embed, cardEmbeddingText } from '../llm/embed.js';
 import { cosineSimilarity } from './similarity.js';
 import { rankRecall } from '../llm/rank.js';
+import { expandCue } from '../llm/expand.js';
 import { parsePlayerJson } from '../player/parse-json.js';
 import type { Player } from '../player/provider.js';
 
@@ -58,7 +59,8 @@ async function recallByVector(
       recall_phrase: card.recall_phrase,
       background: card.background,
     })),
-    direction
+    direction,
+    SHOW
   );
 
   const byId = new Map(pool.map(card => [card.id, card]));
@@ -87,12 +89,17 @@ function toResult(card: Card, relevance: number, reason: string): RecallResult {
   };
 }
 
-// Recall from the current cue (free text).
+// Recall from the current cue (free text). The cue is first expanded into mood
+// words (e.g. "午前3時に聴く曲" -> the feel of deep night) so the time/scene it
+// implies actually steers retrieval and the rerank, instead of the bare digit
+// being lost in the embedding.
 export async function recall(query: string): Promise<RecallResult[]> {
   const cards = listCards().filter(c => c.embedding);
   if (cards.length === 0) return [];
-  const queryVector = await embed(query);
-  return recallByVector(query, queryVector, undefined);
+  const impression = await expandCue(query);
+  const cueText = impression ? `${query}\n${impression}` : query;
+  const queryVector = await embed(cueText);
+  return recallByVector(cueText, queryVector, undefined);
 }
 
 // Recall starting from a single card. `direction` steers the recall toward a

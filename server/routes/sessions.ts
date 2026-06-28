@@ -147,10 +147,11 @@ sessions.post('/:id/related', async c => {
   return c.json(related);
 });
 
-// Posting a fragment makes the Co-listener help articulate it, consulting the
-// web as needed. mode: 'comment' (default) responds to an impression/fragment;
-// 'research' always runs a web search and returns the findings. In 'research'
-// the body is optional (empty means investigate the recent context).
+// Posting a fragment makes the Co-listener help articulate it. mode: 'comment'
+// (default) responds to an impression/fragment without a web search (to keep
+// per-turn cost down; press "research" to consult the web); 'research' always
+// runs a web search and returns the findings. In 'research' the body is
+// optional (empty means investigate the recent context).
 sessions.post('/:id/messages', async c => {
   const session = getSession(c.req.param('id'));
   if (!session) return c.json({ error: 'not found' }, 404);

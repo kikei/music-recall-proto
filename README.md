@@ -44,6 +44,7 @@ at the same time. Open <http://localhost:5173> in a browser.
 | `OPENAI_MODEL` | `gpt-5.5` | Dialogue, compression, recall reasons (web search) |
 | `RANK_MODEL` | `gpt-4o-mini` | Reranking of recall candidates |
 | `OPENAI_EMBED_MODEL` | `text-embedding-3-small` | Semantic search for recall |
+| `WEB_SEARCH_CONTEXT` | `low` | Web search context size (`low`/`medium`/`high`); larger costs more |
 | `SPOTIFY_CLIENT_ID` | (optional) | Resolve a Spotify player by search |
 | `SPOTIFY_CLIENT_SECRET` | (optional) | Paired with `SPOTIFY_CLIENT_ID` |
 | `YOUTUBE_API_KEY` | (optional) | Resolve a YouTube player by search |

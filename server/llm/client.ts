@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { requireEnv } from '../require-env.js';
 
 let client: OpenAI | null = null;
 
@@ -14,12 +15,12 @@ export function openai(): OpenAI {
   return client;
 }
 
-export const chatModel = process.env.OPENAI_MODEL ?? 'gpt-5.5';
+export const chatModel = requireEnv('OPENAI_MODEL');
 
 // Lightweight model for recall selection/reason generation (rerank). It only
 // reads short cards to pick relevant ones and add a brief reason, so use a
 // fast model instead of the heavy dialogue model.
-export const rankModel = process.env.RANK_MODEL ?? 'gpt-4o-mini';
+export const rankModel = requireEnv('RANK_MODEL');
 
 // Compressing a session into a card defaults to the dialogue model but can be
 // set independently.
@@ -29,5 +30,4 @@ export const compressModel = process.env.COMPRESS_MODEL ?? chatModel;
 // set independently.
 export const expandModel = process.env.EXPAND_MODEL ?? rankModel;
 
-export const embedModel =
-  process.env.OPENAI_EMBED_MODEL ?? 'text-embedding-3-small';
+export const embedModel = requireEnv('OPENAI_EMBED_MODEL');

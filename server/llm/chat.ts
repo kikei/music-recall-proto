@@ -1,5 +1,6 @@
 import { openai } from './client.js';
 import { stripTracking } from './strip-tracking.js';
+import { webSearchTool } from './web-search.js';
 import { continuePrompt } from './prompts/chat-continue.js';
 import { researchPrompt } from './prompts/chat-research.js';
 import { openingPrompt } from './prompts/chat-opening.js';
@@ -25,12 +26,17 @@ export async function continueSession(
     ...history.map(m => ({ role: m.role, content: m.content })),
   ];
 
+  // A normal comment turn does not search: the per-turn search was the biggest
+  // silent cost driver, and the user can press "research" to consult the web.
+  // Search runs only when forced (the opening turn, or a session started from a
+  // memo / continued conversation).
   const response = await openai().responses.create({
     model: continuePrompt.model,
     instructions: continuePrompt.system,
     input,
-    tools: [{ type: 'web_search' }],
-    tool_choice: forceSearch ? 'required' : 'auto',
+    ...(forceSearch
+      ? { tools: [webSearchTool()], tool_choice: 'required' as const }
+      : {}),
   });
 
   return stripTracking(response.output_text.trim());
@@ -51,11 +57,13 @@ export async function researchSession(
     ...history.map(m => ({ role: m.role, content: m.content })),
   ];
 
+  // The explicit research button is user-initiated and rare, so spend a bit
+  // more context here (medium) than the default low used elsewhere.
   const response = await openai().responses.create({
     model: researchPrompt.model,
     instructions: researchPrompt.system,
     input,
-    tools: [{ type: 'web_search' }],
+    tools: [webSearchTool('medium')],
     tool_choice: 'required',
   });
 
@@ -73,7 +81,7 @@ export async function openingMessage(
     model: openingPrompt.model,
     instructions: openingPrompt.system,
     input: `これから聴く対象: ${work.title} / ${work.artist}${album}`,
-    tools: [{ type: 'web_search' }],
+    tools: [webSearchTool()],
     tool_choice: forceSearch ? 'required' : 'auto',
   });
 

@@ -41,9 +41,12 @@ at the same time. Open <http://localhost:5173> in a browser.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | (required) | OpenAI API key |
-| `OPENAI_MODEL` | `gpt-5.5` | Dialogue, compression, recall reasons (web search) |
-| `RANK_MODEL` | `gpt-4o-mini` | Reranking of recall candidates |
-| `OPENAI_EMBED_MODEL` | `text-embedding-3-small` | Semantic search for recall |
+| `OPENAI_MODEL` | (required) | Dialogue and research (web search capable) |
+| `RANK_MODEL` | (required) | Reranking of recall candidates |
+| `COMPRESS_MODEL` | (= `OPENAI_MODEL`) | Compressing a session into a card |
+| `EXPAND_MODEL` | (= `RANK_MODEL`) | Expanding a recall cue into mood words |
+| `OPENAI_EMBED_MODEL` | (required) | Semantic search for recall |
+| `WEB_SEARCH_CONTEXT` | `low` | Web search context size (`low`/`medium`/`high`); larger costs more |
 | `SPOTIFY_CLIENT_ID` | (optional) | Resolve a Spotify player by search |
 | `SPOTIFY_CLIENT_SECRET` | (optional) | Paired with `SPOTIFY_CLIENT_ID` |
 | `YOUTUBE_API_KEY` | (optional) | Resolve a YouTube player by search |

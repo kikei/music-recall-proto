@@ -1,6 +1,5 @@
-import { openai } from './client.js';
+import { respond } from './run.js';
 import { stripTracking } from './strip-tracking.js';
-import { webSearchTool } from './web-search.js';
 import { continuePrompt } from './prompts/chat-continue.js';
 import { researchPrompt } from './prompts/chat-research.js';
 import { openingPrompt } from './prompts/chat-opening.js';
@@ -30,16 +29,14 @@ export async function continueSession(
   // silent cost driver, and the user can press "research" to consult the web.
   // Search runs only when forced (the opening turn, or a session started from a
   // memo / continued conversation).
-  const response = await openai().responses.create({
+  const text = await respond('chat.continue', {
     model: continuePrompt.model,
     instructions: continuePrompt.system,
     input,
-    ...(forceSearch
-      ? { tools: [webSearchTool()], tool_choice: 'required' as const }
-      : {}),
+    search: forceSearch ? 'required' : 'off',
   });
 
-  return stripTracking(response.output_text.trim());
+  return stripTracking(text.trim());
 }
 
 // When the user presses the "research" button. Always run a web search and
@@ -59,15 +56,15 @@ export async function researchSession(
 
   // The explicit research button is user-initiated and rare, so spend a bit
   // more context here (medium) than the default low used elsewhere.
-  const response = await openai().responses.create({
+  const text = await respond('chat.research', {
     model: researchPrompt.model,
     instructions: researchPrompt.system,
     input,
-    tools: [webSearchTool('medium')],
-    tool_choice: 'required',
+    search: 'required',
+    searchContext: 'medium',
   });
 
-  return stripTracking(response.output_text.trim());
+  return stripTracking(text.trim());
 }
 
 // Opening message when starting without a memo. Without waiting for user
@@ -77,13 +74,17 @@ export async function openingMessage(
   forceSearch = false
 ): Promise<string> {
   const album = work.album ? ` / アルバム: ${work.album}` : '';
-  const response = await openai().responses.create({
+  const text = await respond('chat.opening', {
     model: openingPrompt.model,
     instructions: openingPrompt.system,
-    input: `これから聴く対象: ${work.title} / ${work.artist}${album}`,
-    tools: [webSearchTool()],
-    tool_choice: forceSearch ? 'required' : 'auto',
+    input: [
+      {
+        role: 'user',
+        content: `これから聴く対象: ${work.title} / ${work.artist}${album}`,
+      },
+    ],
+    search: forceSearch ? 'required' : 'auto',
   });
 
-  return stripTracking(response.output_text.trim());
+  return stripTracking(text.trim());
 }

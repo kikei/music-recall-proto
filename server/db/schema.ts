@@ -38,4 +38,17 @@ CREATE TABLE IF NOT EXISTS cards (
   player_resolved INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (session_id) REFERENCES sessions (id)
 );
+
+CREATE TABLE IF NOT EXISTS llm_usage (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  use TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cached_input_tokens INTEGER NOT NULL DEFAULT 0,
+  search_calls INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL
+);
 `;

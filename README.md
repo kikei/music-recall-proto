@@ -47,6 +47,7 @@ at the same time. Open <http://localhost:5173> in a browser.
 | `EXPAND_MODEL` | (= `RANK_MODEL`) | Expanding a recall cue into mood words |
 | `OPENAI_EMBED_MODEL` | (required) | Semantic search for recall |
 | `WEB_SEARCH_CONTEXT` | `low` | Web search context size (`low`/`medium`/`high`); larger costs more |
+| `LLM_PROVIDER` | `openai` | Default LLM provider (only `openai` wired today) |
 | `SPOTIFY_CLIENT_ID` | (optional) | Resolve a Spotify player by search |
 | `SPOTIFY_CLIENT_SECRET` | (optional) | Paired with `SPOTIFY_CLIENT_ID` |
 | `YOUTUBE_API_KEY` | (optional) | Resolve a YouTube player by search |
@@ -67,11 +68,17 @@ recall.
 
 ## Structure
 
-- `server/` — Hono API. `db/` data layer, `llm/` OpenAI integration, `cards/`
+- `server/` — Hono API. `db/` data layer, `llm/` LLM integration behind a
+  provider seam (`provider.ts` + per-vendor adapters; every call goes through
+  `run.ts`, which records one row per call into the `llm_usage` table), `cards/`
   recall and card generation, `player/` player resolution (Spotify / YouTube /
   Niconico), `routes/` endpoints.
 - `src/` — React frontend. `screens/` holds the three screens, `api/` is the
   client.
+
+LLM usage and derived cost are logged per call; `GET /api/usage` returns an
+aggregated summary (totals, by use, by model). Cost is derived from a rate table
+in `server/llm/pricing.ts` since vendors do not return dollar cost.
 
 ## Development
 

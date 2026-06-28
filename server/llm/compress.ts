@@ -1,4 +1,4 @@
-import { openai } from './client.js';
+import { jsonComplete } from './run.js';
 import { stripTracking } from './strip-tracking.js';
 import { compressPrompt } from './prompts/compress.js';
 import type { Message } from '../db/messages.js';
@@ -31,17 +31,12 @@ export async function compressSession(
 --- セッションの対話 ---
 ${transcript}`;
 
-  const completion = await openai().chat.completions.create({
+  const raw = await jsonComplete('compress', {
     model: compressPrompt.model,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: compressPrompt.system },
-      { role: 'user', content: user },
-    ],
+    system: compressPrompt.system,
+    user,
   });
-
-  const raw = completion.choices[0]?.message.content ?? '{}';
-  const parsed = JSON.parse(raw) as Partial<CompressedCard>;
+  const parsed = JSON.parse(raw || '{}') as Partial<CompressedCard>;
   return {
     title: parsed.title || work.title,
     artist: parsed.artist || work.artist,

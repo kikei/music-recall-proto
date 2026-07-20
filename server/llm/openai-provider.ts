@@ -1,5 +1,6 @@
 import { openai } from './client.js';
 import { webSearchTool } from './web-search.js';
+import { openaiModelOptions } from './openai-model-options.js';
 import type {
   LlmProvider,
   LlmUsage,
@@ -20,6 +21,7 @@ export const openaiProvider: LlmProvider = {
       model: req.model,
       instructions: req.instructions,
       input: req.input,
+      ...openaiModelOptions(req.model),
       ...(req.search === 'off'
         ? {}
         : {
@@ -43,6 +45,7 @@ export const openaiProvider: LlmProvider = {
     const completion = await openai().chat.completions.create({
       model: req.model,
       response_format: { type: 'json_object' },
+      ...openaiModelOptions(req.model),
       messages: [
         { role: 'system', content: req.system },
         { role: 'user', content: req.user },

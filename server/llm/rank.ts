@@ -29,7 +29,7 @@ export async function rankRecall(
     .map(
       c =>
         `id: ${c.id}\n曲: ${c.title} / ${c.artist}\n引っかかり: ${c.hook}\n` +
-        `想起フレーズ: ${c.recall_phrase}\n背景: ${c.background}`
+        `想起フレーズ: ${c.recall_phrase}\n`
     )
     .join('\n---\n');
   const steer = direction

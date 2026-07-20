@@ -23,9 +23,9 @@ export interface RecallResult {
 // How many candidates the embedding gathers roughly. No relevance judgment
 // here; it is a wide net to avoid missing relevant cards. Kept well above SHOW
 // so the rerank has room to choose from.
-const POOL_SIZE = 16;
+const POOL_SIZE = 10;
 // How many to finally surface.
-const SHOW = 10;
+const SHOW = 7;
 
 // Match the cue vector against past cards and surface only a few.
 // Embedding similarity is used only to gather candidates; the actual relevance

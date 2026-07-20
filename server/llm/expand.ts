@@ -1,4 +1,4 @@
-import { openai } from './client.js';
+import { jsonComplete } from './run.js';
 import { expandPrompt } from './prompts/expand.js';
 
 // Expand a free-text cue into mood/atmosphere words before retrieval. A bare
@@ -9,16 +9,12 @@ import { expandPrompt } from './prompts/expand.js';
 // back to the raw cue.
 export async function expandCue(query: string): Promise<string> {
   try {
-    const completion = await openai().chat.completions.create({
+    const raw = await jsonComplete('expand', {
       model: expandPrompt.model,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: expandPrompt.system },
-        { role: 'user', content: query },
-      ],
+      system: expandPrompt.system,
+      user: query,
     });
-    const raw = completion.choices[0]?.message.content ?? '{}';
-    const parsed = JSON.parse(raw) as { impression?: string };
+    const parsed = JSON.parse(raw || '{}') as { impression?: string };
     return parsed.impression?.trim() ?? '';
   } catch {
     // An expansion failure should not break recall; fall back to the raw cue.

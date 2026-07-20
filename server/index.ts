@@ -5,6 +5,7 @@ import { sessions } from './routes/sessions.js';
 import { cards } from './routes/cards.js';
 import { recallRoute } from './routes/recall.js';
 import { player } from './routes/player.js';
+import { usage } from './routes/usage.js';
 
 const app = new Hono();
 
@@ -19,6 +20,7 @@ app.route('/api/sessions', sessions);
 app.route('/api/cards', cards);
 app.route('/api/recall', recallRoute);
 app.route('/api/player', player);
+app.route('/api/usage', usage);
 
 app.onError((err, c) => {
   console.error('[music-recall]', err);

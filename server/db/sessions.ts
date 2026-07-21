@@ -53,6 +53,19 @@ export function listActiveSessions(): Session[] {
     .all() as Session[];
 }
 
+// Correct the work a session is about. The title/artist can be wrong when they
+// were filled from a pasted URL's metadata, so they stay editable while the
+// session is open; the card compressed from it inherits the fix.
+export function editSessionWork(
+  id: string,
+  fields: { title: string; artist: string }
+): Session | undefined {
+  db.prepare(
+    'UPDATE sessions SET title = @title, artist = @artist WHERE id = @id'
+  ).run({ id, ...fields });
+  return getSession(id);
+}
+
 export function closeSession(id: string): void {
   db.prepare("UPDATE sessions SET status = 'closed' WHERE id = ?").run(id);
 }

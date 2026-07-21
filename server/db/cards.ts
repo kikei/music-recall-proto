@@ -108,6 +108,8 @@ export function setCardPlayer(id: string, player: string | null): void {
 export function editCardFields(
   id: string,
   fields: {
+    title: string;
+    artist: string;
     hook: string;
     recall_phrase: string;
     background: string;
@@ -116,9 +118,10 @@ export function editCardFields(
   }
 ): Card | undefined {
   db.prepare(
-    `UPDATE cards SET hook = @hook, recall_phrase = @recall_phrase,
-       background = @background, embedding = @embedding, player = @player,
-       player_resolved = 1, updated_at = @updated_at
+    `UPDATE cards SET title = @title, artist = @artist, hook = @hook,
+       recall_phrase = @recall_phrase, background = @background,
+       embedding = @embedding, player = @player, player_resolved = 1,
+       updated_at = @updated_at
      WHERE id = @id`
   ).run({ id, ...fields, updated_at: new Date().toISOString() });
   return getCard(id);

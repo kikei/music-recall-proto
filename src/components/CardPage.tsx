@@ -4,6 +4,7 @@ import {
   recallHit,
   createSession,
   deleteCard,
+  editCard,
   type Card,
   type Session,
 } from '../api/client.js';
@@ -106,6 +107,15 @@ export function CardPage({
         <>
           <CardView
             card={card}
+            onEditField={async (field, value) => {
+              setError('');
+              try {
+                setCard(await editCard(card.id, { [field]: value }));
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+                throw e; // keep the inline input open for a retry
+              }
+            }}
             titleAction={
               <>
                 <button onClick={() => setEditing(true)}>編集</button>

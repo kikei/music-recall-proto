@@ -6,11 +6,13 @@ import {
   makeCard,
   relatedToSession,
   recallHit,
+  editSession,
   type Session,
   type ChatMessage,
   type Card,
 } from '../api/client.js';
 import { RichText } from '../components/RichText.js';
+import { InlineEditText } from '../components/InlineEditText.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
 import { RelatedRail } from '../components/RelatedRail.js';
 import { CardView } from '../components/CardView.js';
@@ -61,6 +63,17 @@ export function SessionView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Correct the work this session is about, in place from the header.
+  async function saveWork(patch: { title?: string; artist?: string }) {
+    setError('');
+    try {
+      setSession(await editSession(sessionId, patch));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e; // keep the inline input open for a retry
+    }
+  }
 
   async function refreshRelated() {
     try {
@@ -121,8 +134,24 @@ export function SessionView({
     <div className="session-view">
       <section className="conversation">
         <div className="track-header">
-          <strong>{session.title}</strong> / {session.artist}
-          {session.album ? ` (${session.album})` : ''}
+          <strong>
+            <InlineEditText
+              value={session.title}
+              ariaLabel="対象"
+              onSave={v => saveWork({ title: v })}
+            />
+          </strong>{' '}
+          <span className="card-artist">
+            /{' '}
+            <InlineEditText
+              value={session.artist}
+              ariaLabel="アーティスト"
+              onSave={v => saveWork({ artist: v })}
+            />
+          </span>
+          {session.album ? (
+            <span className="card-album"> ({session.album})</span>
+          ) : null}
         </div>
         <ChatLog messages={messages} />
         {error && <p className="error">{error}</p>}

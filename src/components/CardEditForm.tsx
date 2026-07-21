@@ -41,7 +41,9 @@ export function CardEditForm({
   return (
     <div className="card card-edit">
       <h3 className="card-target">
-        {card.title} <span className="card-artist">/ {card.artist}</span>
+        <span className="card-title-text">
+          {card.title} <span className="card-artist">/ {card.artist}</span>
+        </span>
       </h3>
       <label className="field">
         <span>引っかかり</span>

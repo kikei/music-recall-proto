@@ -65,7 +65,6 @@ export function InlineEditText({
         className={`inline-edit${cls}`}
         role="button"
         tabIndex={0}
-        title="クリックで編集"
         onClick={begin}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {

@@ -22,12 +22,15 @@ export function CardPage({
   onClose,
   onStarted,
   onRecallFromCard,
+  onChanged,
 }: {
   cardId: string;
   fromRecall: boolean;
   onClose: () => void;
   onStarted: (session: Session) => void;
   onRecallFromCard: (card: Card, direction: string) => void;
+  // Card content changed, so lists showing it (the sidebar) should refresh.
+  onChanged?: () => void;
 }) {
   const [card, setCard] = useState<Card | null>(null);
   const [editing, setEditing] = useState(false);
@@ -56,6 +59,20 @@ export function CardPage({
     // Once per cardId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId]);
+
+  // Correct the work this card is about, in place from the heading. Available
+  // both in the card view and while the edit form is open.
+  async function editField(field: 'title' | 'artist', value: string) {
+    if (!card) return;
+    setError('');
+    try {
+      setCard(await editCard(card.id, { [field]: value }));
+      onChanged?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e; // keep the inline input open for a retry
+    }
+  }
 
   async function remove() {
     if (!card) return;
@@ -99,23 +116,17 @@ export function CardPage({
           onSaved={updated => {
             setCard(updated);
             setEditing(false);
+            onChanged?.();
           }}
           onCancel={() => setEditing(false)}
+          onEditField={editField}
         />
       )}
       {card && !editing && (
         <>
           <CardView
             card={card}
-            onEditField={async (field, value) => {
-              setError('');
-              try {
-                setCard(await editCard(card.id, { [field]: value }));
-              } catch (e) {
-                setError(e instanceof Error ? e.message : String(e));
-                throw e; // keep the inline input open for a retry
-              }
-            }}
+            onEditField={editField}
             titleAction={
               <>
                 <button onClick={() => setEditing(true)}>編集</button>

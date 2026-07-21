@@ -5,7 +5,7 @@ import {
   type ChatMessage,
 } from '../api/client.js';
 import { RichText } from './RichText.js';
-import { InlineEditText } from './InlineEditText.js';
+import { CardTitleText } from './CardTitleText.js';
 import { formatDateTime } from '../format/datetime.js';
 
 // Show the reunion card's four parts (target, hook, recall phrase, background).
@@ -27,32 +27,7 @@ export function CardView({
   return (
     <article className="card">
       <h3 className="card-target">
-        <span className="card-title-text">
-          {onEditField ? (
-            <InlineEditText
-              value={card.title}
-              ariaLabel="タイトル"
-              onSave={v => onEditField('title', v)}
-            />
-          ) : (
-            card.title
-          )}{' '}
-          <span className="card-artist">
-            /{' '}
-            {onEditField ? (
-              <InlineEditText
-                value={card.artist}
-                ariaLabel="アーティスト"
-                onSave={v => onEditField('artist', v)}
-              />
-            ) : (
-              card.artist
-            )}
-          </span>
-          {card.album ? (
-            <span className="card-album"> ({card.album})</span>
-          ) : null}
-        </span>
+        <CardTitleText card={card} onEditField={onEditField} />
         {titleAction && <span className="card-actions">{titleAction}</span>}
       </h3>
       <dl className="card-fields">

@@ -100,6 +100,11 @@ export function App() {
     setView({ kind: 'card', id: card.id, fromRecall: false });
   }
 
+  // A session's work was corrected: keep the sidebar's copy in step.
+  function sessionUpdated(session: Session) {
+    setOpenSessions(prev => prev.map(s => (s.id === session.id ? session : s)));
+  }
+
   // Discard an open session from the workspace.
   async function removeSession(id: string) {
     if (!window.confirm('このセッションを削除しますか? (元に戻せません)')) {
@@ -175,6 +180,7 @@ export function App() {
               sessionId={activeSessionId}
               onCardCreated={cardCreated}
               onOpenCard={openCard}
+              onSessionUpdated={sessionUpdated}
             />
           )}
           {view.kind === 'cards' && (
@@ -196,6 +202,7 @@ export function App() {
               onClose={closeCard}
               onStarted={started}
               onRecallFromCard={recallFromCard}
+              onChanged={() => setDataVersion(v => v + 1)}
             />
           )}
         </main>

@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import { editCard, playerToUrl, type Card } from '../api/client.js';
 import { AutoTextarea } from './AutoTextarea.js';
+import { CardTitleText } from './CardTitleText.js';
 
 // Card edit form in the detail view. Edit hook, recall phrase, background, and
-// player URL. Saving a field empty removes that item.
+// player URL. Saving a field empty removes that item. The title and artist stay
+// click-to-edit in the heading, as they are outside the form, so they behave the
+// same here as in the card view.
 export function CardEditForm({
   card,
   onSaved,
   onCancel,
+  onEditField,
 }: {
   card: Card;
   onSaved: (card: Card) => void;
   onCancel: () => void;
+  onEditField?: (field: 'title' | 'artist', value: string) => Promise<void>;
 }) {
   const [hook, setHook] = useState(card.hook);
   const [recallPhrase, setRecallPhrase] = useState(card.recall_phrase);
@@ -41,9 +46,7 @@ export function CardEditForm({
   return (
     <div className="card card-edit">
       <h3 className="card-target">
-        <span className="card-title-text">
-          {card.title} <span className="card-artist">/ {card.artist}</span>
-        </span>
+        <CardTitleText card={card} onEditField={onEditField} />
       </h3>
       <label className="field">
         <span>引っかかり</span>

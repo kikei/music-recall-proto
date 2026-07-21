@@ -24,10 +24,13 @@ export function SessionView({
   sessionId,
   onCardCreated,
   onOpenCard,
+  onSessionUpdated,
 }: {
   sessionId: string;
   onCardCreated: (card: Card) => void;
   onOpenCard: (cardId: string, fromRecall: boolean) => void;
+  // The session's work changed, so the sidebar's copy should follow.
+  onSessionUpdated?: (session: Session) => void;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -68,7 +71,9 @@ export function SessionView({
   async function saveWork(patch: { title?: string; artist?: string }) {
     setError('');
     try {
-      setSession(await editSession(sessionId, patch));
+      const updated = await editSession(sessionId, patch);
+      setSession(updated);
+      onSessionUpdated?.(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       throw e; // keep the inline input open for a retry

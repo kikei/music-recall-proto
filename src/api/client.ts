@@ -145,6 +145,8 @@ export function recallFromCard(
 }
 
 export interface CardPatch {
+  title?: string;
+  artist?: string;
   hook?: string;
   recall_phrase?: string;
   background?: string;
@@ -215,6 +217,17 @@ export function getSession(
   sessionId: string
 ): Promise<{ session: Session; messages: ChatMessage[] }> {
   return request(`/api/sessions/${sessionId}`);
+}
+
+// Correct the work an open session is about (title and/or artist).
+export function editSession(
+  sessionId: string,
+  patch: { title?: string; artist?: string }
+): Promise<Session> {
+  return request(`/api/sessions/${sessionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
 }
 
 // Discard an open session from the workspace.

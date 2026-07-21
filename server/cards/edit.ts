@@ -3,14 +3,26 @@ import { embed, cardEmbeddingText } from '../llm/embed.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
 
 export interface CardPatch {
+  title?: string;
+  artist?: string;
   hook?: string;
   recall_phrase?: string;
   background?: string;
   playerUrl?: string; // empty string removes the player
 }
 
-// Edit a card from the detail view: hook, recall phrase, background, player
-// URL. Recompute the embedding vector when the text changes.
+// Pick a patched identity field, keeping the current value when it is absent.
+// Title and artist are required, so reject an explicit empty value.
+function patched(next: string | undefined, current: string, label: string) {
+  if (next === undefined) return current;
+  const trimmed = next.trim();
+  if (!trimmed) throw new Error(`${label}を空にはできません。`);
+  return trimmed;
+}
+
+// Edit a card from the detail view: title, artist, hook, recall phrase,
+// background, player URL. Recompute the embedding vector when any text that
+// feeds it changes.
 export async function editCard(
   id: string,
   patch: CardPatch
@@ -18,10 +30,14 @@ export async function editCard(
   const card = getCard(id);
   if (!card) return undefined;
 
+  const title = patched(patch.title, card.title, 'タイトル');
+  const artist = patched(patch.artist, card.artist, 'アーティスト');
   const hook = patch.hook ?? card.hook;
   const recall_phrase = patch.recall_phrase ?? card.recall_phrase;
   const background = patch.background ?? card.background;
   const textChanged =
+    patch.title !== undefined ||
+    patch.artist !== undefined ||
     patch.hook !== undefined ||
     patch.recall_phrase !== undefined ||
     patch.background !== undefined;
@@ -29,13 +45,7 @@ export async function editCard(
   let embedding = card.embedding;
   if (textChanged) {
     const vector = await embed(
-      cardEmbeddingText({
-        title: card.title,
-        artist: card.artist,
-        hook,
-        recall_phrase,
-        background,
-      })
+      cardEmbeddingText({ title, artist, hook, recall_phrase, background })
     );
     embedding = JSON.stringify(vector);
   }
@@ -57,6 +67,8 @@ export async function editCard(
   }
 
   return editCardFields(id, {
+    title,
+    artist,
     hook,
     recall_phrase,
     background,

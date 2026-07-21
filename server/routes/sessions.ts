@@ -3,6 +3,7 @@ import {
   createSession,
   getSession,
   listActiveSessions,
+  editSessionWork,
   deleteSession,
 } from '../db/sessions.js';
 import { getCard } from '../db/cards.js';
@@ -122,6 +123,23 @@ sessions.get('/:id', c => {
     session: sessionToClient(session),
     messages: listMessages(session.id),
   });
+});
+
+// Correct the title/artist of an open session (they may have been filled in
+// from a pasted URL's metadata). Both are required, so reject an empty value.
+sessions.patch('/:id', async c => {
+  const session = getSession(c.req.param('id'));
+  if (!session) return c.json({ error: 'not found' }, 404);
+  const { title, artist } = await c.req.json().catch(() => ({}));
+  const next = {
+    title: typeof title === 'string' ? title.trim() : session.title,
+    artist: typeof artist === 'string' ? artist.trim() : session.artist,
+  };
+  if (!next.title || !next.artist) {
+    return c.json({ error: '対象とアーティストは空にできません' }, 400);
+  }
+  const updated = editSessionWork(session.id, next);
+  return c.json(sessionToClient(updated!));
 });
 
 // Discard an open session (and its messages) from the workspace.

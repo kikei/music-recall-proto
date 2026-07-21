@@ -5,29 +5,29 @@ import {
   type ChatMessage,
 } from '../api/client.js';
 import { RichText } from './RichText.js';
+import { CardTitleText } from './CardTitleText.js';
 import { formatDateTime } from '../format/datetime.js';
 
 // Show the reunion card's four parts (target, hook, recall phrase, background).
+// When `onEditField` is given, the title and artist become click-to-edit in
+// place; without it they render as plain text (read-only contexts).
 export function CardView({
   card,
   titleAction,
   metaAction,
+  onEditField,
   children,
 }: {
   card: Card;
   titleAction?: React.ReactNode;
   metaAction?: React.ReactNode;
+  onEditField?: (field: 'title' | 'artist', value: string) => Promise<void>;
   children?: React.ReactNode;
 }) {
   return (
     <article className="card">
       <h3 className="card-target">
-        <span className="card-title-text">
-          {card.title} <span className="card-artist">/ {card.artist}</span>
-          {card.album ? (
-            <span className="card-album"> ({card.album})</span>
-          ) : null}
-        </span>
+        <CardTitleText card={card} onEditField={onEditField} />
         {titleAction && <span className="card-actions">{titleAction}</span>}
       </h3>
       <dl className="card-fields">

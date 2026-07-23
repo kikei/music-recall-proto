@@ -723,8 +723,7 @@ button.primary {
   text-overflow: ellipsis;
 }
 
-.card-artist,
-.card-album {
+.card-artist {
   color: var(--muted);
   font-weight: 400;
   font-size: 14px;
@@ -845,6 +844,32 @@ button.primary {
   padding: 0;
   font-size: 13px;
   cursor: pointer;
+}
+
+/* Reference metadata, secondary to the impression fields: a quiet toggle that
+   matches the transcript toggle, opening a monospace editor. */
+.card-metadata {
+  margin-top: 12px;
+}
+
+.metadata-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.metadata-edit {
+  margin-top: 8px;
+}
+
+.metadata-edit textarea {
+  width: 100%;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .transcript .chat-log {

@@ -197,6 +197,7 @@ export function App() {
           )}
           {view.kind === 'card' && (
             <CardPage
+              key={view.id}
               cardId={view.id}
               fromRecall={view.fromRecall}
               onClose={closeCard}

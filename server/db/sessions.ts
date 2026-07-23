@@ -5,17 +5,17 @@ export interface Session {
   id: string;
   title: string;
   artist: string;
-  album: string | null;
   status: string;
   base_card_id: string | null; // on a continued session, the card to overwrite
   player: string | null; // player pasted at start (Player as JSON)
+  metadata: string | null; // freeform reference notes, inherited by the card
   created_at: string;
 }
 
 export function createSession(
   title: string,
   artist: string,
-  album: string | null,
+  metadata: string,
   baseCardId: string | null = null,
   player: string | null = null
 ): Session {
@@ -23,17 +23,17 @@ export function createSession(
     id: randomUUID(),
     title,
     artist,
-    album: album || null,
     status: 'active',
     base_card_id: baseCardId || null,
     player: player || null,
+    metadata,
     created_at: new Date().toISOString(),
   };
   db.prepare(
-    `INSERT INTO sessions (id, title, artist, album, status, base_card_id,
-       player, created_at)
-     VALUES (@id, @title, @artist, @album, @status, @base_card_id,
-       @player, @created_at)`
+    `INSERT INTO sessions (id, title, artist, status, base_card_id,
+       player, metadata, created_at)
+     VALUES (@id, @title, @artist, @status, @base_card_id,
+       @player, @metadata, @created_at)`
   ).run(session);
   return session;
 }
@@ -53,15 +53,16 @@ export function listActiveSessions(): Session[] {
     .all() as Session[];
 }
 
-// Correct the work a session is about. The title/artist can be wrong when they
-// were filled from a pasted URL's metadata, so they stay editable while the
-// session is open; the card compressed from it inherits the fix.
+// Update the work a session is about while it is open. Title/artist can be
+// wrong when filled from a pasted URL's metadata, and the reference metadata is
+// entered here too; the card compressed from the session inherits all of them.
 export function editSessionWork(
   id: string,
-  fields: { title: string; artist: string }
+  fields: { title: string; artist: string; metadata: string | null }
 ): Session | undefined {
   db.prepare(
-    'UPDATE sessions SET title = @title, artist = @artist WHERE id = @id'
+    `UPDATE sessions SET title = @title, artist = @artist, metadata = @metadata
+     WHERE id = @id`
   ).run({ id, ...fields });
   return getSession(id);
 }

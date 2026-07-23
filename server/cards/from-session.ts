@@ -20,7 +20,7 @@ export async function createCardFromSession(sessionId: string): Promise<Card> {
 
   const history = listMessages(sessionId);
   const compressed = await compressSession(
-    { title: session.title, artist: session.artist, album: session.album },
+    { title: session.title, artist: session.artist },
     history
   );
 
@@ -29,10 +29,12 @@ export async function createCardFromSession(sessionId: string): Promise<Card> {
     session_id: sessionId,
     title: compressed.title,
     artist: compressed.artist,
-    album: compressed.album,
     hook: compressed.hook,
     recall_phrase: compressed.recall_phrase,
     background: compressed.background,
+    // The reference metadata is entered on the session (seeded from the base
+    // card on a continued session), so the card just inherits it.
+    metadata: session.metadata,
     embedding,
   };
 

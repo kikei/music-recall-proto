@@ -1,7 +1,7 @@
 import { InlineEditText } from './InlineEditText.js';
 import type { Card } from '../api/client.js';
 
-// The work a card is about: title / artist (album). With `onEditField` the
+// The work a card is about: title / artist. With `onEditField` the
 // title and artist are click-to-edit in place; without it they are plain text.
 // Shared by the card view and the edit form so the heading reads and behaves
 // the same whether or not the form is open.
@@ -35,7 +35,6 @@ export function CardTitleText({
           card.artist
         )}
       </span>
-      {card.album ? <span className="card-album"> ({card.album})</span> : null}
     </span>
   );
 }

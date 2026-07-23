@@ -74,6 +74,19 @@ export function CardPage({
     }
   }
 
+  // Save the freeform reference metadata. It does not touch the sidebar (which
+  // only shows title/artist), so no onChanged here.
+  async function saveMetadata(next: string) {
+    if (!card) return;
+    setError('');
+    try {
+      setCard(await editCard(card.id, { metadata: next }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e; // keep the metadata editor open for a retry
+    }
+  }
+
   async function remove() {
     if (!card) return;
     if (!window.confirm('このカードを削除しますか? (元に戻せません)')) return;
@@ -127,6 +140,7 @@ export function CardPage({
           <CardView
             card={card}
             onEditField={editField}
+            onSaveMetadata={saveMetadata}
             titleAction={
               <>
                 <button onClick={() => setEditing(true)}>編集</button>

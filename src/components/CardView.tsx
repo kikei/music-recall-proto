@@ -6,22 +6,26 @@ import {
 } from '../api/client.js';
 import { RichText } from './RichText.js';
 import { CardTitleText } from './CardTitleText.js';
+import { MetadataEditor } from './MetadataEditor.js';
 import { formatDateTime } from '../format/datetime.js';
 
 // Show the reunion card's four parts (target, hook, recall phrase, background).
 // When `onEditField` is given, the title and artist become click-to-edit in
-// place; without it they render as plain text (read-only contexts).
+// place; without it they render as plain text (read-only contexts). When
+// `onSaveMetadata` is given, the reference-metadata toggle is shown.
 export function CardView({
   card,
   titleAction,
   metaAction,
   onEditField,
+  onSaveMetadata,
   children,
 }: {
   card: Card;
   titleAction?: React.ReactNode;
   metaAction?: React.ReactNode;
   onEditField?: (field: 'title' | 'artist', value: string) => Promise<void>;
+  onSaveMetadata?: (next: string) => Promise<void>;
   children?: React.ReactNode;
 }) {
   return (
@@ -43,6 +47,9 @@ export function CardView({
         <span>想起から {card.recall_count} 回参照</span>
         {metaAction && <span className="meta-action">{metaAction}</span>}
       </div>
+      {onSaveMetadata && (
+        <MetadataEditor value={card.metadata} onSave={onSaveMetadata} />
+      )}
       {card.session_id && <Transcript key={card.id} cardId={card.id} />}
       {children}
     </article>

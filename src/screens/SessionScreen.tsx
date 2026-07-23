@@ -13,6 +13,7 @@ import {
 } from '../api/client.js';
 import { RichText } from '../components/RichText.js';
 import { InlineEditText } from '../components/InlineEditText.js';
+import { MetadataEditor } from '../components/MetadataEditor.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
 import { RelatedRail } from '../components/RelatedRail.js';
 import { CardView } from '../components/CardView.js';
@@ -67,8 +68,12 @@ export function SessionView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  // Correct the work this session is about, in place from the header.
-  async function saveWork(patch: { title?: string; artist?: string }) {
+  // Update this session's work (title/artist) or its reference metadata.
+  async function saveWork(patch: {
+    title?: string;
+    artist?: string;
+    metadata?: string;
+  }) {
     setError('');
     try {
       const updated = await editSession(sessionId, patch);
@@ -76,7 +81,7 @@ export function SessionView({
       onSessionUpdated?.(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      throw e; // keep the inline input open for a retry
+      throw e; // keep the input open for a retry
     }
   }
 
@@ -154,9 +159,6 @@ export function SessionView({
               onSave={v => saveWork({ artist: v })}
             />
           </span>
-          {session.album ? (
-            <span className="card-album"> ({session.album})</span>
-          ) : null}
         </div>
         <ChatLog messages={messages} />
         {error && <p className="error">{error}</p>}
@@ -166,6 +168,10 @@ export function SessionView({
           onChange={setDraft}
           onSend={send}
           onResearch={investigate}
+        />
+        <MetadataEditor
+          value={session.metadata}
+          onSave={v => saveWork({ metadata: v })}
         />
         <button className="session-finish" disabled={busy} onClick={finish}>
           セッションを終了する

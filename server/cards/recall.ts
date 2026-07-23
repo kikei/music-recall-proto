@@ -10,7 +10,6 @@ export interface RecallResult {
   id: string;
   title: string;
   artist: string;
-  album: string | null;
   hook: string;
   recall_phrase: string;
   background: string;
@@ -78,7 +77,6 @@ function toResult(card: Card, relevance: number, reason: string): RecallResult {
     id: card.id,
     title: card.title,
     artist: card.artist,
-    album: card.album,
     hook: card.hook,
     recall_phrase: card.recall_phrase,
     background: card.background,

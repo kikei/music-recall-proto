@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import { schema } from './schema.js';
+import { runMigrations } from './migrate.js';
 
 const dbPath = process.env.DB_PATH ?? 'data/music-recall.sqlite';
 
@@ -12,6 +13,9 @@ mkdirSync(dirname(dbPath), { recursive: true });
 // Share a single connection across the whole process.
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
+// The base schema is the frozen baseline; it creates the tables for a fresh DB
+// and is a no-op for an existing one. Structural changes since then live as
+// numbered migrations (see runMigrations below), not edits to this baseline.
 db.exec(schema);
 
 // Retrofit migrations for existing DBs. Ignore if the column already exists.
@@ -44,3 +48,7 @@ try {
 } catch {
   // cards.player_resolved already exists
 }
+
+// Apply versioned schema migrations on top of the baseline. New structural
+// changes go here as numbered migrations, not as ad-hoc ALTERs above.
+runMigrations(db, dbPath);

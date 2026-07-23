@@ -8,7 +8,6 @@ import type { Message } from '../db/messages.js';
 interface Work {
   title: string;
   artist: string;
-  album: string | null;
 }
 
 export async function continueSession(
@@ -16,11 +15,10 @@ export async function continueSession(
   history: Message[],
   forceSearch = false
 ): Promise<string> {
-  const album = work.album ? ` / アルバム: ${work.album}` : '';
   const input = [
     {
       role: 'user' as const,
-      content: `今聴いている対象: ${work.title} / ${work.artist}${album}`,
+      content: `今聴いている対象: ${work.title} / ${work.artist}`,
     },
     ...history.map(m => ({ role: m.role, content: m.content })),
   ];
@@ -45,11 +43,10 @@ export async function researchSession(
   work: Work,
   history: Message[]
 ): Promise<string> {
-  const album = work.album ? ` / アルバム: ${work.album}` : '';
   const input = [
     {
       role: 'user' as const,
-      content: `今聴いている対象: ${work.title} / ${work.artist}${album}`,
+      content: `今聴いている対象: ${work.title} / ${work.artist}`,
     },
     ...history.map(m => ({ role: m.role, content: m.content })),
   ];
@@ -73,14 +70,13 @@ export async function openingMessage(
   work: Work,
   forceSearch = false
 ): Promise<string> {
-  const album = work.album ? ` / アルバム: ${work.album}` : '';
   const text = await respond('chat.opening', {
     model: openingPrompt.model,
     instructions: openingPrompt.system,
     input: [
       {
         role: 'user',
-        content: `これから聴く対象: ${work.title} / ${work.artist}${album}`,
+        content: `これから聴く対象: ${work.title} / ${work.artist}`,
       },
     ],
     search: forceSearch ? 'required' : 'auto',

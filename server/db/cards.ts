@@ -7,10 +7,10 @@ export interface Card {
   session_id: string | null;
   title: string;
   artist: string;
-  album: string | null;
   hook: string; // the snag (what caught you)
   recall_phrase: string; // recall phrase
   background: string; // background
+  metadata: string | null; // freeform reference notes (album/label/etc.)
   embedding: string | null; // embedding vector as JSON
   created_at: string;
   updated_at: string;
@@ -23,10 +23,10 @@ export interface NewCard {
   session_id: string | null;
   title: string;
   artist: string;
-  album: string | null;
   hook: string;
   recall_phrase: string;
   background: string;
+  metadata: string | null;
   embedding: number[] | null;
 }
 
@@ -37,10 +37,10 @@ export function createCard(input: NewCard): Card {
     session_id: input.session_id,
     title: input.title,
     artist: input.artist,
-    album: input.album || null,
     hook: input.hook,
     recall_phrase: input.recall_phrase,
     background: input.background,
+    metadata: input.metadata,
     embedding: input.embedding ? JSON.stringify(input.embedding) : null,
     created_at: now,
     updated_at: now,
@@ -49,12 +49,12 @@ export function createCard(input: NewCard): Card {
     player_resolved: 0,
   };
   db.prepare(
-    `INSERT INTO cards (id, session_id, title, artist, album, hook,
-       recall_phrase, background, embedding, created_at, updated_at,
+    `INSERT INTO cards (id, session_id, title, artist, hook,
+       recall_phrase, background, metadata, embedding, created_at, updated_at,
        recall_count, player, player_resolved)
-     VALUES (@id, @session_id, @title, @artist, @album, @hook,
-       @recall_phrase, @background, @embedding, @created_at, @updated_at,
-       @recall_count, @player, @player_resolved)`
+     VALUES (@id, @session_id, @title, @artist, @hook,
+       @recall_phrase, @background, @metadata, @embedding, @created_at,
+       @updated_at, @recall_count, @player, @player_resolved)`
   ).run(card);
   return card;
 }
@@ -72,24 +72,25 @@ export function getCard(id: string): Card | undefined {
 }
 
 // Overwrite the original card with new data on a continued session. Keep id,
-// created_at, recall_count; update content, embedding, source session,
-// updated_at.
+// created_at, recall_count; update content, metadata, embedding, source
+// session, updated_at. The continued session's metadata was seeded from this
+// card, so writing it back preserves the notes and applies any edits.
 export function updateCard(id: string, input: NewCard): Card | undefined {
   db.prepare(
     `UPDATE cards SET
        session_id = @session_id, title = @title, artist = @artist,
-       album = @album, hook = @hook, recall_phrase = @recall_phrase,
-       background = @background, embedding = @embedding, updated_at = @updated_at
+       hook = @hook, recall_phrase = @recall_phrase, background = @background,
+       metadata = @metadata, embedding = @embedding, updated_at = @updated_at
      WHERE id = @id`
   ).run({
     id,
     session_id: input.session_id,
     title: input.title,
     artist: input.artist,
-    album: input.album || null,
     hook: input.hook,
     recall_phrase: input.recall_phrase,
     background: input.background,
+    metadata: input.metadata,
     embedding: input.embedding ? JSON.stringify(input.embedding) : null,
     updated_at: new Date().toISOString(),
   });
@@ -103,8 +104,8 @@ export function setCardPlayer(id: string, player: string | null): void {
   ).run(player, id);
 }
 
-// Edit from the detail view: update hook, recall phrase, background,
-// embedding, and player (title etc. are not changed).
+// Edit from the detail view: update title, artist, hook, recall phrase,
+// background, metadata, embedding, and player.
 export function editCardFields(
   id: string,
   fields: {
@@ -113,6 +114,7 @@ export function editCardFields(
     hook: string;
     recall_phrase: string;
     background: string;
+    metadata: string | null;
     embedding: string | null;
     player: string | null;
   }
@@ -120,8 +122,8 @@ export function editCardFields(
   db.prepare(
     `UPDATE cards SET title = @title, artist = @artist, hook = @hook,
        recall_phrase = @recall_phrase, background = @background,
-       embedding = @embedding, player = @player, player_resolved = 1,
-       updated_at = @updated_at
+       metadata = @metadata, embedding = @embedding, player = @player,
+       player_resolved = 1, updated_at = @updated_at
      WHERE id = @id`
   ).run({ id, ...fields, updated_at: new Date().toISOString() });
   return getCard(id);

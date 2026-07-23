@@ -19,6 +19,7 @@ import { cardToClient } from '../cards/to-client.js';
 import { sessionToClient } from '../sessions/to-client.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
 import { describePlayer } from '../player/describe-player.js';
+import { BLANK_METADATA_TEMPLATE } from '../cards/metadata-template.js';
 import type { Player } from '../player/provider.js';
 
 export const sessions = new Hono();
@@ -77,20 +78,21 @@ sessions.post('/', async c => {
     typeof continueFromCardId === 'string' && continueFromCardId
       ? continueFromCardId
       : null;
+  const base = baseId ? getCard(baseId) : null;
+  // Seed the reference metadata: on a continued session from the base card so
+  // its notes carry over, otherwise the blank template.
+  const metadata = base?.metadata ?? BLANK_METADATA_TEMPLATE;
   const session = createSession(
     work.title,
     work.artist,
-    null,
+    metadata,
     baseId,
     pasted ? JSON.stringify(pasted) : null
   );
 
-  if (baseId) {
-    const base = getCard(baseId);
-    if (base?.session_id) {
-      for (const m of listMessages(base.session_id)) {
-        addMessage(session.id, m.role, m.content);
-      }
+  if (base?.session_id) {
+    for (const m of listMessages(base.session_id)) {
+      addMessage(session.id, m.role, m.content);
     }
   }
 
@@ -98,11 +100,7 @@ sessions.post('/', async c => {
     addMessage(session.id, 'user', memo.trim());
   }
 
-  const chatWork = {
-    title: session.title,
-    artist: session.artist,
-    album: session.album,
-  };
+  const chatWork = { title: session.title, artist: session.artist };
   const history = listMessages(session.id);
   const opening =
     history.length > 0
@@ -125,15 +123,17 @@ sessions.get('/:id', c => {
   });
 });
 
-// Correct the title/artist of an open session (they may have been filled in
-// from a pasted URL's metadata). Both are required, so reject an empty value.
+// Update an open session's title/artist (may have been filled from a pasted
+// URL's metadata) and/or its freeform reference metadata. Title/artist are
+// required, so reject an empty value; metadata is freeform.
 sessions.patch('/:id', async c => {
   const session = getSession(c.req.param('id'));
   if (!session) return c.json({ error: 'not found' }, 404);
-  const { title, artist } = await c.req.json().catch(() => ({}));
+  const { title, artist, metadata } = await c.req.json().catch(() => ({}));
   const next = {
     title: typeof title === 'string' ? title.trim() : session.title,
     artist: typeof artist === 'string' ? artist.trim() : session.artist,
+    metadata: typeof metadata === 'string' ? metadata : session.metadata,
   };
   if (!next.title || !next.artist) {
     return c.json({ error: '対象とアーティストは空にできません' }, 400);
@@ -179,11 +179,7 @@ sessions.post('/:id/messages', async c => {
     return c.json({ error: '入力が空です' }, 400);
   }
 
-  const work = {
-    title: session.title,
-    artist: session.artist,
-    album: session.album,
-  };
+  const work = { title: session.title, artist: session.artist };
   const text = typeof content === 'string' ? content.trim() : '';
   const user = text ? addMessage(session.id, 'user', text) : null;
   const reply = research

@@ -2,9 +2,9 @@ export interface Session {
   id: string;
   title: string;
   artist: string;
-  album: string | null;
   status: string;
   player: Player | null;
+  metadata: string | null;
   created_at: string;
 }
 
@@ -33,10 +33,10 @@ export interface Card {
   session_id: string | null;
   title: string;
   artist: string;
-  album: string | null;
   hook: string;
   recall_phrase: string;
   background: string;
+  metadata: string | null;
   created_at: string;
   updated_at: string;
   recall_count: number;
@@ -47,7 +47,6 @@ export interface RecallResult {
   id: string;
   title: string;
   artist: string;
-  album: string | null;
   hook: string;
   recall_phrase: string;
   background: string;
@@ -150,6 +149,7 @@ export interface CardPatch {
   hook?: string;
   recall_phrase?: string;
   background?: string;
+  metadata?: string;
   playerUrl?: string; // empty string removes the player
 }
 
@@ -219,10 +219,10 @@ export function getSession(
   return request(`/api/sessions/${sessionId}`);
 }
 
-// Correct the work an open session is about (title and/or artist).
+// Update an open session's work (title/artist) and/or its reference metadata.
 export function editSession(
   sessionId: string,
-  patch: { title?: string; artist?: string }
+  patch: { title?: string; artist?: string; metadata?: string }
 ): Promise<Session> {
   return request(`/api/sessions/${sessionId}`, {
     method: 'PATCH',

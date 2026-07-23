@@ -8,6 +8,7 @@ export interface CardPatch {
   hook?: string;
   recall_phrase?: string;
   background?: string;
+  metadata?: string; // freeform reference notes; not part of the embedding
   playerUrl?: string; // empty string removes the player
 }
 
@@ -35,6 +36,8 @@ export async function editCard(
   const hook = patch.hook ?? card.hook;
   const recall_phrase = patch.recall_phrase ?? card.recall_phrase;
   const background = patch.background ?? card.background;
+  // Metadata is reference-only; it never feeds the embedding.
+  const metadata = patch.metadata ?? card.metadata;
   const textChanged =
     patch.title !== undefined ||
     patch.artist !== undefined ||
@@ -72,6 +75,7 @@ export async function editCard(
     hook,
     recall_phrase,
     background,
+    metadata,
     embedding,
     player,
   });

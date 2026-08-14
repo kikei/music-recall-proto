@@ -57,4 +57,23 @@ export const migrations: Migration[] = [
       db.exec('CREATE INDEX idx_llm_usage_user ON llm_usage (user_id)');
     },
   },
+  {
+    id: 4,
+    name: 'store per-account third-party API keys',
+    up(db) {
+      // Rows keyed by kind rather than columns, so a new provider needs no
+      // schema change. `secret` is encrypted; `hint` is the few trailing
+      // characters the settings screen shows to tell keys apart.
+      db.exec(
+        `CREATE TABLE user_credentials (
+           user_id TEXT NOT NULL,
+           kind TEXT NOT NULL,
+           secret TEXT NOT NULL,
+           hint TEXT NOT NULL,
+           updated_at TEXT NOT NULL,
+           PRIMARY KEY (user_id, kind)
+         )`
+      );
+    },
+  },
 ];

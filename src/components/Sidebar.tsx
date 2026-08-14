@@ -17,6 +17,7 @@ export function Sidebar({
   onDeleteSession,
   onOpenCard,
   onCards,
+  onSettings,
   onRecall,
 }: {
   sessions: Session[];
@@ -30,6 +31,7 @@ export function Sidebar({
   onDeleteSession: (id: string) => void;
   onOpenCard: (id: string) => void;
   onCards: () => void;
+  onSettings: () => void;
   onRecall: (query: string) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -118,6 +120,12 @@ export function Sidebar({
         onClick={onCards}
       >
         カード一覧 →
+      </button>
+      <button
+        className={view === 'settings' ? 'side-more active' : 'side-more'}
+        onClick={onSettings}
+      >
+        設定 →
       </button>
       <SignOutButton />
     </aside>

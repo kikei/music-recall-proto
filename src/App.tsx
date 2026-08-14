@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SessionView } from './screens/SessionScreen.js';
 import { StartSessionForm } from './screens/StartSessionForm.js';
 import { CardsScreen } from './screens/CardsScreen.js';
+import { SettingsScreen } from './screens/SettingsScreen.js';
 import {
   RecallScreen,
   type RecallFromCardRequest,
@@ -26,6 +27,7 @@ type MainView =
   | { kind: 'session' }
   | { kind: 'new' }
   | { kind: 'cards' }
+  | { kind: 'settings' }
   | {
       kind: 'recall';
       query?: string;
@@ -166,6 +168,7 @@ export function App() {
           onOpenCard={id => openCard(id, false)}
           onNew={() => setView({ kind: 'new' })}
           onCards={() => setView({ kind: 'cards' })}
+          onSettings={() => setView({ kind: 'settings' })}
           onRecall={runRecall}
         />
         <main className="main">
@@ -186,6 +189,7 @@ export function App() {
           {view.kind === 'cards' && (
             <CardsScreen dataVersion={dataVersion} onOpenCard={openCard} />
           )}
+          {view.kind === 'settings' && <SettingsScreen />}
           {view.kind === 'recall' && (
             <RecallScreen
               key={view.nonce}

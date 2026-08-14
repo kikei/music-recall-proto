@@ -1,12 +1,17 @@
+import { spotifyCredentials } from '../credentials/resolve.js';
+
 // Use Spotify via the Client Credentials flow (no user login).
 // Used to search for works (gather candidates) and verify existence by id.
-
-let cached: { token: string; expiresAt: number } | null = null;
+// The credentials are the account's own when it set them, otherwise the
+// operator's, so tokens are cached per client id rather than globally.
+const cachedTokens = new Map<string, { token: string; expiresAt: number }>();
 
 async function getToken(): Promise<string | null> {
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  const secret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!id || !secret) return null;
+  const credentials = spotifyCredentials();
+  if (!credentials) return null;
+  const { id, secret } = credentials;
+
+  const cached = cachedTokens.get(id);
   if (cached && Date.now() < cached.expiresAt - 60_000) return cached.token;
 
   const res = await fetch('https://accounts.spotify.com/api/token', {
@@ -24,15 +29,15 @@ async function getToken(): Promise<string | null> {
     access_token: string;
     expires_in: number;
   };
-  cached = {
+  cachedTokens.set(id, {
     token: json.access_token,
     expiresAt: Date.now() + json.expires_in * 1000,
-  };
-  return cached.token;
+  });
+  return json.access_token;
 }
 
 export function spotifyConfigured(): boolean {
-  return !!(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET);
+  return spotifyCredentials() !== null;
 }
 
 export interface SpotifyMeta {

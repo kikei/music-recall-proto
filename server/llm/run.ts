@@ -1,6 +1,7 @@
 import { getProvider } from './providers.js';
 import { estimateCost } from './pricing.js';
 import { insertUsage } from '../db/usage.js';
+import { currentUserId } from '../auth/request-context.js';
 import type {
   ProviderName,
   RespondRequest,
@@ -21,6 +22,9 @@ function record(
 ): void {
   try {
     insertUsage({
+      // Which account to bill this to, taken from the request context so the
+      // account does not have to be threaded through every LLM call site.
+      userId: currentUserId(),
       use,
       provider,
       model,

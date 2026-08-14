@@ -14,8 +14,11 @@ import { resolvePlayer, playerConfigured } from '../player/resolve.js';
 // End a listening session and compress the dialogue into one reunion card.
 // A continued session (with base_card_id) overwrites the original card;
 // otherwise a new card is created.
-export async function createCardFromSession(sessionId: string): Promise<Card> {
-  const session = getSession(sessionId);
+export async function createCardFromSession(
+  sessionId: string,
+  userId: string
+): Promise<Card> {
+  const session = getSession(sessionId, userId);
   if (!session) throw new Error('session not found');
 
   const history = listMessages(sessionId);
@@ -26,6 +29,7 @@ export async function createCardFromSession(sessionId: string): Promise<Card> {
 
   const embedding = await embed(cardEmbeddingText(compressed));
   const input = {
+    user_id: userId,
     session_id: sessionId,
     title: compressed.title,
     artist: compressed.artist,
@@ -40,15 +44,15 @@ export async function createCardFromSession(sessionId: string): Promise<Card> {
 
   // Continued session: overwrite the original card if it still exists.
   const overwrite =
-    session.base_card_id && getCard(session.base_card_id)
-      ? updateCard(session.base_card_id, input)
+    session.base_card_id && getCard(session.base_card_id, userId)
+      ? updateCard(session.base_card_id, userId, input)
       : undefined;
   const card = overwrite ?? createCard(input);
 
   await persistCardPlayer(session, card);
 
-  closeSession(sessionId);
-  return getCard(card.id) ?? card;
+  closeSession(sessionId, userId);
+  return getCard(card.id, userId) ?? card;
 }
 
 // Save the listening player on the card. Priority order:
@@ -59,12 +63,16 @@ export async function createCardFromSession(sessionId: string): Promise<Card> {
 //     unsettled while no credentials exist (can be re-resolved after keys).
 async function persistCardPlayer(session: Session, card: Card): Promise<void> {
   if (session.player) {
-    setCardPlayer(card.id, session.player);
+    setCardPlayer(card.id, card.user_id, session.player);
     return;
   }
   if (card.player) return;
   const player = await resolvePlayer(card.title, card.artist);
   if (player || playerConfigured()) {
-    setCardPlayer(card.id, player ? JSON.stringify(player) : null);
+    setCardPlayer(
+      card.id,
+      card.user_id,
+      player ? JSON.stringify(player) : null
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Session, Card } from '../api/client.js';
 import { AutoTextarea } from './AutoTextarea.js';
+import { SignOutButton } from '../auth/SignOutButton.js';
 
 // Left rail: the brand (home) with a + to start a session, a recall input, the
 // open sessions, and recent cards.
@@ -118,6 +119,7 @@ export function Sidebar({
       >
         カード一覧 →
       </button>
+      <SignOutButton />
     </aside>
   );
 }

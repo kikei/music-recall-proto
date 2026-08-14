@@ -34,4 +34,27 @@ export const migrations: Migration[] = [
       db.exec('ALTER TABLE sessions ADD COLUMN metadata TEXT');
     },
   },
+  {
+    id: 3,
+    name: 'add accounts and scope data to them',
+    up(db) {
+      db.exec(
+        `CREATE TABLE users (
+           id TEXT PRIMARY KEY,
+           subject TEXT NOT NULL UNIQUE,
+           created_at TEXT NOT NULL
+         )`
+      );
+      // Nullable: rows that predate accounts have no owner yet. The first
+      // account to sign in claims them (see claimOwnerlessRows), which gives
+      // each existing single-user install its data back without a manual step.
+      db.exec('ALTER TABLE cards ADD COLUMN user_id TEXT');
+      db.exec('ALTER TABLE sessions ADD COLUMN user_id TEXT');
+      db.exec('ALTER TABLE llm_usage ADD COLUMN user_id TEXT');
+      // Every read is filtered by owner, so these carry the common queries.
+      db.exec('CREATE INDEX idx_cards_user ON cards (user_id)');
+      db.exec('CREATE INDEX idx_sessions_user ON sessions (user_id)');
+      db.exec('CREATE INDEX idx_llm_usage_user ON llm_usage (user_id)');
+    },
+  },
 ];

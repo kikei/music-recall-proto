@@ -351,6 +351,52 @@ body {
   text-shadow: 0 0 8px rgba(200, 162, 107, 0.55);
 }
 
+/* Sign out sits below the sidebar's navigation, quieter than it: leaving is
+   never the thing you came here to do. */
+.side-signout {
+  background: none;
+  border: none;
+  text-align: right;
+  padding: 2px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.side-signout:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Pre-sign-in screen: centred, with nothing else on the page. */
+.sign-in {
+  max-width: 420px;
+  margin: 18vh auto 0;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.sign-in h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.sign-in .hint {
+  margin-bottom: 20px;
+}
+
+.setup-missing {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 13px;
+  color: var(--accent);
+}
+
 .side-more.active {
   color: var(--accent);
 }

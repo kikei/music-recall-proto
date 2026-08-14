@@ -1,3 +1,5 @@
+import { accessToken } from './access-token.js';
+
 export interface Session {
   id: string;
   title: string;
@@ -57,9 +59,14 @@ export interface RecallResult {
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = await accessToken();
   const res = await fetch(url, {
-    headers: { 'content-type': 'application/json' },
     ...options,
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
   });
   const data = await res.json();
   if (!res.ok) {

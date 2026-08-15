@@ -16,11 +16,7 @@ export function cardEmbeddingText(card: {
   recall_phrase: string;
   background: string;
 }): string {
-  return [
-    `${card.title} / ${card.artist}`,
-    card.hook,
-    card.recall_phrase,
-  ]
+  return [`${card.title} / ${card.artist}`, card.hook, card.recall_phrase]
     .filter(Boolean)
     .join('\n');
 }

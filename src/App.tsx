@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SessionView } from './screens/SessionScreen.js';
 import { StartSessionForm } from './screens/StartSessionForm.js';
 import { CardsScreen } from './screens/CardsScreen.js';
+import { SettingsScreen } from './screens/SettingsScreen.js';
 import {
   RecallScreen,
   type RecallFromCardRequest,
@@ -12,6 +13,7 @@ import {
   listActiveSessions,
   deleteSession,
   listCards,
+  getAccount,
   type Session,
   type Card,
 } from './api/client.js';
@@ -26,6 +28,7 @@ type MainView =
   | { kind: 'session' }
   | { kind: 'new' }
   | { kind: 'cards' }
+  | { kind: 'settings' }
   | {
       kind: 'recall';
       query?: string;
@@ -42,6 +45,7 @@ export function App() {
   const [returnView, setReturnView] = useState<MainView>({ kind: 'cards' });
   const [recentCards, setRecentCards] = useState<Card[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [error, setError] = useState('');
   const recallSeq = useRef(0);
 
@@ -59,6 +63,16 @@ export function App() {
     })();
   }, []);
 
+  // The chosen name shown at the foot of the sidebar. Held here so renaming in
+  // settings updates the sidebar without a reload.
+  useEffect(() => {
+    getAccount()
+      .then(a => setDisplayName(a.displayName))
+      // Only the label is missing, which is not worth a banner; an expired
+      // session is reported by the gate instead.
+      .catch(e => console.warn('[account] 名前を取得できませんでした', e));
+  }, []);
+
   // Keep the sidebar's recent-cards list fresh as cards change.
   useEffect(() => {
     listCards()
@@ -69,7 +83,8 @@ export function App() {
             .slice(0, RECENT_CARDS)
         )
       )
-      .catch(() => {});
+      // An empty sidebar with no explanation reads as lost data, so say why.
+      .catch(e => setError(e instanceof Error ? e.message : String(e)));
   }, [dataVersion]);
 
   function foreground(id: string) {
@@ -159,6 +174,7 @@ export function App() {
           activeSessionId={view.kind === 'session' ? activeSessionId : null}
           activeCardId={view.kind === 'card' ? view.id : null}
           view={view.kind}
+          displayName={displayName}
           recentCards={recentCards}
           onHome={goHome}
           onSelectSession={foreground}
@@ -166,6 +182,7 @@ export function App() {
           onOpenCard={id => openCard(id, false)}
           onNew={() => setView({ kind: 'new' })}
           onCards={() => setView({ kind: 'cards' })}
+          onSettings={() => setView({ kind: 'settings' })}
           onRecall={runRecall}
         />
         <main className="main">
@@ -185,6 +202,12 @@ export function App() {
           )}
           {view.kind === 'cards' && (
             <CardsScreen dataVersion={dataVersion} onOpenCard={openCard} />
+          )}
+          {view.kind === 'settings' && (
+            <SettingsScreen
+              displayName={displayName}
+              onDisplayNameChanged={setDisplayName}
+            />
           )}
           {view.kind === 'recall' && (
             <RecallScreen

@@ -33,10 +33,13 @@ const SHOW = 7;
 async function recallByVector(
   queryText: string,
   queryVector: number[],
+  userId: string,
   excludeId?: string,
   direction?: string
 ): Promise<RecallResult[]> {
-  const cards = listCards().filter(c => c.embedding && c.id !== excludeId);
+  const cards = listCards(userId).filter(
+    c => c.embedding && c.id !== excludeId
+  );
   if (cards.length === 0) return [];
 
   const pool = cards
@@ -91,13 +94,16 @@ function toResult(card: Card, relevance: number, reason: string): RecallResult {
 // words (e.g. "午前3時に聴く曲" -> the feel of deep night) so the time/scene it
 // implies actually steers retrieval and the rerank, instead of the bare digit
 // being lost in the embedding.
-export async function recall(query: string): Promise<RecallResult[]> {
-  const cards = listCards().filter(c => c.embedding);
+export async function recall(
+  query: string,
+  userId: string
+): Promise<RecallResult[]> {
+  const cards = listCards(userId).filter(c => c.embedding);
   if (cards.length === 0) return [];
   const impression = await expandCue(query);
   const cueText = impression ? `${query}\n${impression}` : query;
   const queryVector = await embed(cueText);
-  return recallByVector(cueText, queryVector, undefined);
+  return recallByVector(cueText, queryVector, userId);
 }
 
 // Recall starting from a single card. `direction` steers the recall toward a
@@ -106,13 +112,14 @@ export async function recall(query: string): Promise<RecallResult[]> {
 // the candidate pool also leans that way, and the LLM rerank is steered too.
 export async function recallFromCard(
   cardId: string,
+  userId: string,
   direction?: string
 ): Promise<RecallResult[]> {
-  const card = getCard(cardId);
+  const card = getCard(cardId, userId);
   if (!card?.embedding) return [];
   const queryText = cardEmbeddingText(card);
   const queryVector = direction
     ? await embed(`${queryText}\n方向性: ${direction}`)
     : (JSON.parse(card.embedding) as number[]);
-  return recallByVector(queryText, queryVector, card.id, direction);
+  return recallByVector(queryText, queryVector, userId, card.id, direction);
 }

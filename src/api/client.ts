@@ -1,3 +1,6 @@
+import { accessToken } from './access-token.js';
+import { reportUnauthorized } from './session-expiry.js';
+
 export interface Session {
   id: string;
   title: string;
@@ -58,14 +61,36 @@ export interface RecallResult {
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    headers: { 'content-type': 'application/json' },
     ...options,
+    headers: {
+      'content-type': 'application/json',
+      ...(await authorization()),
+      ...options?.headers,
+    },
   });
   const data = await res.json();
   if (!res.ok) {
+    // A rejected or missing token is not something a screen can act on, so it
+    // goes to the gate, which can offer a way back in. The error still throws
+    // so the caller stops.
+    if (res.status === 401) reportUnauthorized();
     throw new Error(data?.error ?? `リクエストに失敗しました (${res.status})`);
   }
   return data as T;
+}
+
+// Failing to obtain a token is treated the same as not having one: the request
+// goes out unauthenticated, comes back 401, and takes the single recovery path
+// above. Otherwise the provider's own error would surface on whichever screen
+// happened to be open.
+async function authorization(): Promise<Record<string, string>> {
+  try {
+    const token = await accessToken();
+    return token ? { authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    console.warn('[auth] アクセストークンを取得できませんでした', e);
+    return {};
+  }
 }
 
 export function createSession(
@@ -239,4 +264,56 @@ export function deleteSession(sessionId: string): Promise<{ ok: true }> {
 // text. Runs after each Co-listener turn.
 export function relatedToSession(sessionId: string): Promise<Card[]> {
   return request(`/api/sessions/${sessionId}/related`, { method: 'POST' });
+}
+
+// Third-party API keys an account supplies. The secret is only ever sent to the
+// server; what comes back is whether it is set plus a few trailing characters.
+export type CredentialKind =
+  | 'openai'
+  | 'spotify_client_id'
+  | 'spotify_client_secret'
+  | 'youtube';
+
+export interface CredentialStatus {
+  kind: CredentialKind;
+  configured: boolean;
+  hint: string;
+}
+
+export function listCredentials(): Promise<CredentialStatus[]> {
+  return request('/api/credentials');
+}
+
+export function saveCredential(
+  kind: CredentialKind,
+  secret: string
+): Promise<CredentialStatus[]> {
+  return request(`/api/credentials/${kind}`, {
+    method: 'PUT',
+    body: JSON.stringify({ secret }),
+  });
+}
+
+export function removeCredential(
+  kind: CredentialKind
+): Promise<CredentialStatus[]> {
+  return request(`/api/credentials/${kind}`, { method: 'DELETE' });
+}
+
+// The account as this app knows it. The identity provider keeps the real
+// profile; the only name here is the one the person chose, and it is a label
+// rather than an identifier -- nothing resolves or routes by it.
+export interface Account {
+  displayName: string | null;
+}
+
+export function getAccount(): Promise<Account> {
+  return request('/api/account');
+}
+
+export function setDisplayName(displayName: string): Promise<Account> {
+  return request('/api/account', {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName }),
+  });
 }

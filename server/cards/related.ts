@@ -9,10 +9,16 @@ const RELATED_SHOW = 3;
 // Ambient in-session recall: surface related past cards by embedding similarity
 // only -- no LLM rerank and no reason text. Cheap enough to run on every turn,
 // unlike the considered, reason-bearing recall used elsewhere.
-export async function relatedToText(text: string, excludeCardId?: string) {
+export async function relatedToText(
+  text: string,
+  userId: string,
+  excludeCardId?: string
+) {
   const trimmed = text.trim();
   if (!trimmed) return [];
-  const cards = listCards().filter(c => c.embedding && c.id !== excludeCardId);
+  const cards = listCards(userId).filter(
+    c => c.embedding && c.id !== excludeCardId
+  );
   if (cards.length === 0) return [];
   const vector = await embed(trimmed);
   return cards

@@ -2,8 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { db } from './open.js';
 
 // Reunion card: the smallest unit that records an encounter with music.
+// Every read and write is scoped by user_id: the owner is a required argument
+// rather than a filter the caller may forget, so one account can never reach
+// another's cards (recall in particular must never surface someone else's).
 export interface Card {
   id: string;
+  user_id: string;
   session_id: string | null;
   title: string;
   artist: string;
@@ -20,6 +24,7 @@ export interface Card {
 }
 
 export interface NewCard {
+  user_id: string;
   session_id: string | null;
   title: string;
   artist: string;
@@ -34,6 +39,7 @@ export function createCard(input: NewCard): Card {
   const now = new Date().toISOString();
   const card: Card = {
     id: randomUUID(),
+    user_id: input.user_id,
     session_id: input.session_id,
     title: input.title,
     artist: input.artist,
@@ -49,41 +55,46 @@ export function createCard(input: NewCard): Card {
     player_resolved: 0,
   };
   db.prepare(
-    `INSERT INTO cards (id, session_id, title, artist, hook,
+    `INSERT INTO cards (id, user_id, session_id, title, artist, hook,
        recall_phrase, background, metadata, embedding, created_at, updated_at,
        recall_count, player, player_resolved)
-     VALUES (@id, @session_id, @title, @artist, @hook,
+     VALUES (@id, @user_id, @session_id, @title, @artist, @hook,
        @recall_phrase, @background, @metadata, @embedding, @created_at,
        @updated_at, @recall_count, @player, @player_resolved)`
   ).run(card);
   return card;
 }
 
-export function listCards(): Card[] {
+export function listCards(userId: string): Card[] {
   return db
-    .prepare('SELECT * FROM cards ORDER BY updated_at DESC')
-    .all() as Card[];
+    .prepare('SELECT * FROM cards WHERE user_id = ? ORDER BY updated_at DESC')
+    .all(userId) as Card[];
 }
 
-export function getCard(id: string): Card | undefined {
-  return db.prepare('SELECT * FROM cards WHERE id = ?').get(id) as
-    | Card
-    | undefined;
+export function getCard(id: string, userId: string): Card | undefined {
+  return db
+    .prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?')
+    .get(id, userId) as Card | undefined;
 }
 
 // Overwrite the original card with new data on a continued session. Keep id,
 // created_at, recall_count; update content, metadata, embedding, source
 // session, updated_at. The continued session's metadata was seeded from this
 // card, so writing it back preserves the notes and applies any edits.
-export function updateCard(id: string, input: NewCard): Card | undefined {
+export function updateCard(
+  id: string,
+  userId: string,
+  input: NewCard
+): Card | undefined {
   db.prepare(
     `UPDATE cards SET
        session_id = @session_id, title = @title, artist = @artist,
        hook = @hook, recall_phrase = @recall_phrase, background = @background,
        metadata = @metadata, embedding = @embedding, updated_at = @updated_at
-     WHERE id = @id`
+     WHERE id = @id AND user_id = @user_id`
   ).run({
     id,
+    user_id: userId,
     session_id: input.session_id,
     title: input.title,
     artist: input.artist,
@@ -94,20 +105,25 @@ export function updateCard(id: string, input: NewCard): Card | undefined {
     embedding: input.embedding ? JSON.stringify(input.embedding) : null,
     updated_at: new Date().toISOString(),
   });
-  return getCard(id);
+  return getCard(id, userId);
 }
 
 // Record the player resolution result on the card (resolved=1 even if none).
-export function setCardPlayer(id: string, player: string | null): void {
+export function setCardPlayer(
+  id: string,
+  userId: string,
+  player: string | null
+): void {
   db.prepare(
-    'UPDATE cards SET player = ?, player_resolved = 1 WHERE id = ?'
-  ).run(player, id);
+    'UPDATE cards SET player = ?, player_resolved = 1 WHERE id = ? AND user_id = ?'
+  ).run(player, id, userId);
 }
 
 // Edit from the detail view: update title, artist, hook, recall phrase,
 // background, metadata, embedding, and player.
 export function editCardFields(
   id: string,
+  userId: string,
   fields: {
     title: string;
     artist: string;
@@ -124,22 +140,33 @@ export function editCardFields(
        recall_phrase = @recall_phrase, background = @background,
        metadata = @metadata, embedding = @embedding, player = @player,
        player_resolved = 1, updated_at = @updated_at
-     WHERE id = @id`
-  ).run({ id, ...fields, updated_at: new Date().toISOString() });
-  return getCard(id);
+     WHERE id = @id AND user_id = @user_id`
+  ).run({
+    id,
+    user_id: userId,
+    ...fields,
+    updated_at: new Date().toISOString(),
+  });
+  return getCard(id, userId);
 }
 
 // Delete a card, along with its source session and that session's messages.
-export function deleteCard(id: string): boolean {
-  const card = getCard(id);
+export function deleteCard(id: string, userId: string): boolean {
+  const card = getCard(id, userId);
   if (!card) return false;
   const tx = db.transaction(() => {
-    db.prepare('DELETE FROM cards WHERE id = ?').run(id);
+    db.prepare('DELETE FROM cards WHERE id = ? AND user_id = ?').run(
+      id,
+      userId
+    );
     if (card.session_id) {
       db.prepare('DELETE FROM messages WHERE session_id = ?').run(
         card.session_id
       );
-      db.prepare('DELETE FROM sessions WHERE id = ?').run(card.session_id);
+      db.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').run(
+        card.session_id,
+        userId
+      );
     }
   });
   tx();
@@ -147,8 +174,8 @@ export function deleteCard(id: string): boolean {
 }
 
 // Increment the reference count each time the card surfaces in recall.
-export function bumpRecallCount(id: string): void {
+export function bumpRecallCount(id: string, userId: string): void {
   db.prepare(
-    'UPDATE cards SET recall_count = recall_count + 1 WHERE id = ?'
-  ).run(id);
+    'UPDATE cards SET recall_count = recall_count + 1 WHERE id = ? AND user_id = ?'
+  ).run(id, userId);
 }

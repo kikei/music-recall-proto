@@ -68,9 +68,9 @@ export function StartSessionForm({
 
   return (
     <section className="start-form">
-      <p className="lead">今から聴く対象を教えてください。</p>
       <div className={player ? 'start-grid has-preview' : 'start-grid'}>
         <div className="start-fields">
+          <p className="lead">今から聴く対象を教えてください。</p>
           <label className="field">
             <span className="field-label">視聴 URL (任意)</span>
             <input

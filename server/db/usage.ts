@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from './open.js';
 
 export interface UsageRow {
+  userId: string | null;
   use: string;
   provider: string;
   model: string;
@@ -14,14 +15,15 @@ export interface UsageRow {
 
 export function insertUsage(row: UsageRow): void {
   db.prepare(
-    `INSERT INTO llm_usage (id, created_at, use, provider, model,
+    `INSERT INTO llm_usage (id, created_at, user_id, use, provider, model,
        input_tokens, output_tokens, cached_input_tokens, search_calls, cost_usd)
-     VALUES (@id, @created_at, @use, @provider, @model,
+     VALUES (@id, @created_at, @user_id, @use, @provider, @model,
        @input_tokens, @output_tokens, @cached_input_tokens, @search_calls,
        @cost_usd)`
   ).run({
     id: randomUUID(),
     created_at: new Date().toISOString(),
+    user_id: row.userId,
     use: row.use,
     provider: row.provider,
     model: row.model,
@@ -62,20 +64,23 @@ const SUM = `COUNT(*) AS calls,
   COALESCE(SUM(search_calls), 0) AS search_calls,
   COALESCE(SUM(cost_usd), 0) AS cost_usd`;
 
-export function summarizeUsage(): UsageSummary {
+// Usage is reported per account: with per-account API keys coming, each person
+// should only ever see what their own key was spent on.
+export function summarizeUsage(userId: string): UsageSummary {
   const totals = db
-    .prepare(`SELECT ${SUM} FROM llm_usage`)
-    .get() as UsageTotals;
+    .prepare(`SELECT ${SUM} FROM llm_usage WHERE user_id = ?`)
+    .get(userId) as UsageTotals;
   const byUse = db
     .prepare(
-      `SELECT use, ${SUM} FROM llm_usage GROUP BY use ORDER BY cost_usd DESC`
+      `SELECT use, ${SUM} FROM llm_usage WHERE user_id = ?
+       GROUP BY use ORDER BY cost_usd DESC`
     )
-    .all() as UsageByUse[];
+    .all(userId) as UsageByUse[];
   const byModel = db
     .prepare(
-      `SELECT provider, model, ${SUM} FROM llm_usage
+      `SELECT provider, model, ${SUM} FROM llm_usage WHERE user_id = ?
        GROUP BY provider, model ORDER BY cost_usd DESC`
     )
-    .all() as UsageByModel[];
+    .all(userId) as UsageByModel[];
   return { totals, byUse, byModel };
 }

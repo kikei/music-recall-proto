@@ -26,9 +26,10 @@ function patched(next: string | undefined, current: string, label: string) {
 // feeds it changes.
 export async function editCard(
   id: string,
+  userId: string,
   patch: CardPatch
 ): Promise<Card | undefined> {
-  const card = getCard(id);
+  const card = getCard(id, userId);
   if (!card) return undefined;
 
   const title = patched(patch.title, card.title, 'タイトル');
@@ -69,7 +70,7 @@ export async function editCard(
     }
   }
 
-  return editCardFields(id, {
+  return editCardFields(id, userId, {
     title,
     artist,
     hook,

@@ -25,9 +25,13 @@ export interface CredentialStatus {
   hint: string;
 }
 
-// Enough to tell two keys apart without being useful on its own.
+// Enough to recognise which key is stored without being useful on its own. The
+// leading characters carry the provider's prefix, which is what actually tells
+// two keys apart; the trailing few confirm you are looking at the right one.
+// Short secrets are masked outright rather than mostly revealed.
 function hintOf(secret: string): string {
-  return secret.length <= 4 ? '****' : `…${secret.slice(-4)}`;
+  if (secret.length <= 16) return '****';
+  return `${secret.slice(0, 8)}…${secret.slice(-4)}`;
 }
 
 export function setCredential(

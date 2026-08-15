@@ -13,6 +13,7 @@ import {
   listActiveSessions,
   deleteSession,
   listCards,
+  getAccount,
   type Session,
   type Card,
 } from './api/client.js';
@@ -44,6 +45,7 @@ export function App() {
   const [returnView, setReturnView] = useState<MainView>({ kind: 'cards' });
   const [recentCards, setRecentCards] = useState<Card[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [error, setError] = useState('');
   const recallSeq = useRef(0);
 
@@ -59,6 +61,14 @@ export function App() {
         setError(e instanceof Error ? e.message : String(e));
       }
     })();
+  }, []);
+
+  // The chosen name shown at the foot of the sidebar. Held here so renaming in
+  // settings updates the sidebar without a reload.
+  useEffect(() => {
+    getAccount()
+      .then(a => setDisplayName(a.displayName))
+      .catch(() => {});
   }, []);
 
   // Keep the sidebar's recent-cards list fresh as cards change.
@@ -161,6 +171,7 @@ export function App() {
           activeSessionId={view.kind === 'session' ? activeSessionId : null}
           activeCardId={view.kind === 'card' ? view.id : null}
           view={view.kind}
+          displayName={displayName}
           recentCards={recentCards}
           onHome={goHome}
           onSelectSession={foreground}
@@ -189,7 +200,12 @@ export function App() {
           {view.kind === 'cards' && (
             <CardsScreen dataVersion={dataVersion} onOpenCard={openCard} />
           )}
-          {view.kind === 'settings' && <SettingsScreen />}
+          {view.kind === 'settings' && (
+            <SettingsScreen
+              displayName={displayName}
+              onDisplayNameChanged={setDisplayName}
+            />
+          )}
           {view.kind === 'recall' && (
             <RecallScreen
               key={view.nonce}

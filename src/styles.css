@@ -7,6 +7,12 @@
   --accent: #c8a26b;
   --accent-ink: #1a1620;
   --line: #322e3c;
+  /* Hover surfaces. Two of them because a highlight has to clear whatever it
+     sits on: --hover lifts off --bg, --hover-panel off the account band. The
+     band's is the stronger step, since that target is small and sits at the
+     edge of where the eye is looking. */
+  --hover: #2a2734;
+  --hover-panel: #383345;
   --user: #2c3a4a;
 }
 
@@ -272,13 +278,39 @@ body {
 }
 
 .side-card:hover {
-  background: var(--panel);
+  background: var(--hover);
 }
 
 /* Mirrors the active-session highlight so an open card is marked the same way. */
 .side-card.active {
-  background: var(--panel);
+  background: var(--hover);
   border-color: var(--accent);
+}
+
+/* Last row of the recent cards: told apart from the cards above by sitting to
+   the right with a chevron, rather than by colour -- the accent would have made
+   a quiet way out of the list louder than the cards themselves. */
+.side-all {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.side-all svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.side-all:hover {
+  color: var(--ink);
 }
 
 .side-section {
@@ -309,11 +341,11 @@ body {
 }
 
 .side-item:hover {
-  background: var(--panel);
+  background: var(--hover);
 }
 
 .side-item.active {
-  background: var(--panel);
+  background: var(--hover);
   border-color: var(--accent);
 }
 
@@ -331,42 +363,111 @@ body {
   font-size: 12px;
 }
 
-.side-more {
+/* The foot of the sidebar. Everything above it fades out towards the bottom, so
+   without a solid element here the rail just trails off and the eye has nothing
+   to land on. A filled band terminates it: structure rather than more colour,
+   since the accent is reserved for what is current or interactive. */
+.side-account {
+  display: flex;
+  align-items: center;
+  /* No gap and no left padding: space that belongs to the row rather than to
+     an element inside it cannot be clicked, which left dead ground beside the
+     name. The name carries that space as its own padding instead. */
+  padding-right: 4px;
+  background: var(--panel);
+  border-radius: 10px;
+}
+
+/* Reads as a label, behaves as a link into settings. It fills the space up to
+   the icons so the gap beside the name is part of the target rather than dead
+   ground, and takes a little height for the same reason. */
+.side-account-name {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px 5px 10px;
+  border-radius: 8px;
   background: none;
   border: none;
-  text-align: right;
-  padding: 4px 10px;
-  color: var(--muted);
+  text-align: left;
+  color: var(--ink);
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+/* Matches the cards and sessions above, which mark a hover with a background
+   rather than a colour change. The band is already --panel, so the highlight
+   goes a step lighter, which is also what the icons beside it do. */
+.side-account-name:hover {
+  background: var(--hover-panel);
+}
+
+.side-account-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+/* Lighter than the muted text: at this size a dimmer stroke reads as smudged
+   rather than quiet. */
+.side-account-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--ink);
+  opacity: 0.72;
   cursor: pointer;
   transition:
+    opacity 0.15s ease,
     color 0.15s ease,
-    text-shadow 0.15s ease;
+    background 0.15s ease;
 }
 
-/* Right-aligned, so the text itself reacts: it shifts to the accent color and
-   gives off a faint glow rather than a full-width fill. */
-.side-more:hover {
-  color: var(--accent);
-  text-shadow: 0 0 8px rgba(200, 162, 107, 0.55);
+/* The strokes used to look crisper on hover simply because they brightened
+   against a dark background. Now that the background lifts too, that contrast
+   is gone, so the weight is added back deliberately. */
+.side-account-icon:hover svg,
+.side-account-icon.active svg {
+  stroke-width: 2.1;
 }
 
-/* Sign out sits below the sidebar's navigation, quieter than it: leaving is
-   never the thing you came here to do. */
-.side-signout {
-  background: none;
-  border: none;
-  text-align: right;
-  padding: 2px 10px;
-  color: var(--muted);
-  font-size: 11px;
-  opacity: 0.7;
-  cursor: pointer;
+.side-account-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.side-signout:hover {
+.side-account-icon:hover {
   opacity: 1;
+  background: var(--hover-panel);
+}
+
+.side-account-icon.active {
   color: var(--accent);
+  opacity: 1;
+}
+
+/* Waiting states that own the whole page. Same vertical placement as the
+   sign-in screen they sit either side of, so the screen does not jump. */
+.page-status {
+  max-width: 420px;
+  margin: 18vh auto 0;
+  padding: 0 16px;
+  text-align: center;
+  color: var(--muted);
 }
 
 /* Pre-sign-in screen: centred, with nothing else on the page. */
@@ -388,51 +489,141 @@ body {
   margin-bottom: 20px;
 }
 
-/* API key settings. Deliberately plain: it is a form you visit rarely, so it
-   should be legible rather than decorated. */
+/* API key settings. A form visited rarely, so it should be quick to read: the
+   controls are sized down from the app's default buttons, which are meant for
+   the main flow and dwarf a single-line field. */
+/* Centred in the main area: with no right-hand panel to balance it, a narrow
+   block pinned to the left edge reads as a mistake. */
 .settings {
-  max-width: 620px;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .settings h2 {
   font-size: 17px;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
-.credential-field {
+/* The second section heading needs room from the block above it. */
+.settings h2 + .key-group.first {
+  margin-top: 0;
+}
+
+.settings section + h2 {
+  margin-top: 28px;
+}
+
+.key-group {
   border-top: 1px solid var(--line);
-  padding-top: 14px;
-  margin-top: 18px;
+  padding-top: 12px;
+  margin-top: 16px;
 }
 
-.credential-head {
+/* The first section heads the page, so it needs no rule above it. */
+.key-group.first {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.key-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* The action sits beside the fields rather than on a line of its own: a single
+   short row above a right-aligned button left the group mostly empty. It aligns
+   with the last field, so in a paired credential it reads as confirming both
+   rather than hovering between them. */
+.key-body {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: flex-end;
   gap: 12px;
 }
 
-.credential-label {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.credential-state {
-  color: var(--muted);
-  font-size: 12px;
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  white-space: nowrap;
-}
-
-.credential-entry {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.credential-entry input {
+.key-fields {
   flex: 1;
   min-width: 0;
+}
+
+/* Two password fields stacked tightly read as one smudge, so the rows in a
+   paired credential are given room to be told apart. */
+.key-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.key-row:last-child {
+  margin-bottom: 0;
+}
+
+.key-label {
+  flex-shrink: 0;
+  width: 100px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.key-row input {
+  margin-bottom: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* A stored key sits where its input would be, so "already set" is read in the
+   flow rather than found in a corner. */
+.key-value {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Set apart from the word before it, which is a state rather than a label for
+   the value. */
+.key-hint {
+  margin-left: 14px;
+  color: var(--muted);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+/* A name is short; matching the width of a key field would promise room the
+   value never needs. */
+.key-input-short {
+  max-width: 260px;
+}
+
+.key-actions {
+  flex-shrink: 0;
+}
+
+/* Fades in beside the action it confirms, then clears itself. */
+.key-saved {
+  color: var(--accent);
+  font-size: 12px;
+  animation: key-saved-in 0.15s ease;
+}
+
+@keyframes key-saved-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.key-button {
+  padding: 5px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.key-button.danger {
+  color: #e08a8a;
 }
 
 .setup-missing {
@@ -441,10 +632,6 @@ body {
   margin: 0 0 16px;
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 13px;
-  color: var(--accent);
-}
-
-.side-more.active {
   color: var(--accent);
 }
 
@@ -1169,15 +1356,19 @@ button.primary {
   color: #e08a8a;
 }
 
+/* Held to the same reading width as the settings screen and centred with it,
+   so the two narrow screens sit the same way. Left alone the fields stretched
+   the full width of the main area, which is far wider than a form wants. */
 .start-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
   gap: 24px;
   align-items: start;
 }
 
 .start-grid.has-preview {
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 560px) 320px;
 }
 
 .start-preview {

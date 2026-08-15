@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import type { Session, Card } from '../api/client.js';
 import { AutoTextarea } from './AutoTextarea.js';
-import { SignOutButton } from '../auth/SignOutButton.js';
+import { AccountPanel } from '../auth/AccountPanel.js';
 
 // Left rail: the brand (home) with a + to start a session, a recall input, the
-// open sessions, and recent cards.
+// open sessions, and recent cards ending in a link to all of them. Account
+// actions sit at the foot, below the scrolling region.
 export function Sidebar({
   sessions,
   recentCards,
   activeSessionId,
   activeCardId,
   view,
+  displayName,
   onHome,
   onNew,
   onSelectSession,
@@ -25,6 +27,7 @@ export function Sidebar({
   activeSessionId: string | null;
   activeCardId: string | null;
   view: string;
+  displayName: string | null;
   onHome: () => void;
   onNew: () => void;
   onSelectSession: (id: string) => void;
@@ -113,21 +116,26 @@ export function Sidebar({
               {c.title} <span className="side-artist">/ {c.artist}</span>
             </button>
           ))}
+          <button
+            className={
+              view === 'cards'
+                ? 'side-card side-all active'
+                : 'side-card side-all'
+            }
+            onClick={onCards}
+          >
+            すべてのカード
+            <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
         </div>
       </div>
-      <button
-        className={view === 'cards' ? 'side-more active' : 'side-more'}
-        onClick={onCards}
-      >
-        カード一覧 →
-      </button>
-      <button
-        className={view === 'settings' ? 'side-more active' : 'side-more'}
-        onClick={onSettings}
-      >
-        設定 →
-      </button>
-      <SignOutButton />
+      <AccountPanel
+        displayName={displayName}
+        active={view === 'settings'}
+        onSettings={onSettings}
+      />
     </aside>
   );
 }

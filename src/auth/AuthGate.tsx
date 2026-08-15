@@ -26,7 +26,14 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
     return () => setAccessTokenGetter(null);
   }, [isAuthenticated, getAccessToken]);
 
-  if (isLoading) return <p className="hint">読み込んでいます…</p>;
+  // Checked before isLoading on purpose. The SDK raises isLoading again for
+  // every later token refresh, and unmounting the app for that would restart
+  // it -- whose mount-time loads ask for a token, raising isLoading once more.
+  // That cycle never ends and locks the tab up. Once the account is known and
+  // the token getter is registered, the app stays mounted through refreshes.
+  if (isAuthenticated && tokenReady) return <>{children}</>;
+
+  if (isLoading) return <PageStatus>読み込んでいます…</PageStatus>;
 
   if (!isAuthenticated) {
     return (
@@ -42,8 +49,7 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!tokenReady) return <p className="hint">読み込んでいます…</p>;
-  return <>{children}</>;
+  return <PageStatus>読み込んでいます…</PageStatus>;
 }
 
 // Lands here after the identity provider redirects back. Reload at the root so
@@ -61,5 +67,15 @@ function SignInCallback() {
       </div>
     );
   }
-  return <p className="hint">サインインしています…</p>;
+  return <PageStatus>サインインしています…</PageStatus>;
+}
+
+// A whole screen with nothing on it yet. Centred like the sign-in screen, so a
+// wait looks like a considered state rather than a page that failed to draw.
+function PageStatus({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="page-status">
+      <p>{children}</p>
+    </div>
+  );
 }

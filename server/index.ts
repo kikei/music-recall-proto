@@ -7,6 +7,7 @@ import { recallRoute } from './routes/recall.js';
 import { player } from './routes/player.js';
 import { usage } from './routes/usage.js';
 import { credentials } from './routes/credentials.js';
+import { account } from './routes/account.js';
 import { requireUser, type AppEnv } from './auth/require-user.js';
 
 const app = new Hono<AppEnv>();
@@ -28,6 +29,7 @@ app.route('/api/recall', recallRoute);
 app.route('/api/player', player);
 app.route('/api/usage', usage);
 app.route('/api/credentials', credentials);
+app.route('/api/account', account);
 
 app.onError((err, c) => {
   console.error('[music-recall]', err);

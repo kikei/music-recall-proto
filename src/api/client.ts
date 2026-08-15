@@ -281,3 +281,21 @@ export function removeCredential(
 ): Promise<CredentialStatus[]> {
   return request(`/api/credentials/${kind}`, { method: 'DELETE' });
 }
+
+// The account as this app knows it. The identity provider keeps the real
+// profile; the only name here is the one the person chose, and it is a label
+// rather than an identifier -- nothing resolves or routes by it.
+export interface Account {
+  displayName: string | null;
+}
+
+export function getAccount(): Promise<Account> {
+  return request('/api/account');
+}
+
+export function setDisplayName(displayName: string): Promise<Account> {
+  return request('/api/account', {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName }),
+  });
+}

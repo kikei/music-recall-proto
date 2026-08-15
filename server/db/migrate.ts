@@ -30,7 +30,24 @@ export function runMigrations(db: Database.Database, dbPath: string): void {
   // migrations are forward-only.
   backup(db, dbPath);
 
-  for (const m of pending) apply(db, m);
+  // Rebuilding a table means dropping one that others reference, which SQLite's
+  // own guidance says to do with enforcement off; better-sqlite3 turns it on by
+  // default. It cannot be changed inside a transaction, so it is handled here,
+  // and what enforcement would have caught is checked once the work is done.
+  const enforced = db.pragma('foreign_keys', { simple: true }) === 1;
+  db.pragma('foreign_keys = OFF');
+  try {
+    for (const m of pending) apply(db, m);
+    const broken = db.pragma('foreign_key_check') as unknown[];
+    if (broken.length > 0) {
+      throw new Error(
+        `マイグレーションで参照整合性が壊れました (${broken.length} 件)。` +
+          `${dbPath} をバックアップから戻してください。`
+      );
+    }
+  } finally {
+    if (enforced) db.pragma('foreign_keys = ON');
+  }
 }
 
 function apply(db: Database.Database, m: Migration): void {

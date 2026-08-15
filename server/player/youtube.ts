@@ -1,7 +1,10 @@
+import { youtubeKey } from '../credentials/resolve.js';
+
 // Search videos via the YouTube Data API v3 and check existence/embeddability.
+// The key is the account's own when it set one, otherwise the operator's.
 
 export function youtubeConfigured(): boolean {
-  return !!process.env.YOUTUBE_API_KEY;
+  return !!youtubeKey();
 }
 
 export interface YouTubeMeta {
@@ -11,7 +14,7 @@ export interface YouTubeMeta {
 
 // Return info if the videoId exists and is embeddable, otherwise null.
 export async function youtubeLookup(id: string): Promise<YouTubeMeta | null> {
-  const key = process.env.YOUTUBE_API_KEY;
+  const key = youtubeKey();
   if (!key) return null;
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/videos?part=snippet,status` +
@@ -44,7 +47,7 @@ export async function youtubeSearch(
   title: string,
   artist: string
 ): Promise<YouTubeCandidate[]> {
-  const key = process.env.YOUTUBE_API_KEY;
+  const key = youtubeKey();
   if (!key) return [];
   const q = encodeURIComponent(`${title} ${artist}`);
   const res = await fetch(

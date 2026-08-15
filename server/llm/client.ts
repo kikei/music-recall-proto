@@ -1,19 +1,14 @@
 import OpenAI from 'openai';
 import { modelConfig } from './model-config.js';
+import { openaiKey } from '../credentials/resolve.js';
 
-let client: OpenAI | null = null;
-
-// Lazily create the client on the first LLM call so the server can start even
-// without a key. Throw a clear error if it is unset. The key is the one setting
-// that stays in the environment (a secret); model choices live in model-config.
+// Built per call from the signed-in account's own key, so one person's requests
+// are never billed to another's key. Deliberately not cached in a module-level
+// client: that was fine when a single key came from the environment, but here
+// it would pin whichever account happened to call first. The SDK client is
+// little more than configuration, so constructing one per call is cheap.
 export function openai(): OpenAI {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY が未設定です。.env に設定してください。');
-  }
-  if (!client) {
-    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return client;
+  return new OpenAI({ apiKey: openaiKey() });
 }
 
 export const chatModel = modelConfig.models.chat;

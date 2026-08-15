@@ -9,15 +9,16 @@ import { listMessages } from '../db/messages.js';
 import { recallFromCard } from '../cards/recall.js';
 import { editCard } from '../cards/edit.js';
 import { cardToClient as toClient } from '../cards/to-client.js';
+import type { AppEnv } from '../auth/require-user.js';
 
-export const cards = new Hono();
+export const cards = new Hono<AppEnv>();
 
 cards.get('/', c => {
-  return c.json(listCards().map(toClient));
+  return c.json(listCards(c.get('userId')).map(toClient));
 });
 
 cards.get('/:id', c => {
-  const card = getCard(c.req.param('id'));
+  const card = getCard(c.req.param('id'), c.get('userId'));
   if (!card) return c.json({ error: 'not found' }, 404);
   return c.json(toClient(card));
 });
@@ -26,7 +27,7 @@ cards.get('/:id', c => {
 cards.patch('/:id', async c => {
   const body = await c.req.json().catch(() => ({}));
   try {
-    const card = await editCard(c.req.param('id'), body);
+    const card = await editCard(c.req.param('id'), c.get('userId'), body);
     if (!card) return c.json({ error: 'not found' }, 404);
     return c.json(toClient(card));
   } catch (e) {
@@ -36,32 +37,34 @@ cards.patch('/:id', async c => {
 
 // Delete a card (its source session and messages are removed too).
 cards.delete('/:id', c => {
-  const ok = deleteCard(c.req.param('id'));
+  const ok = deleteCard(c.req.param('id'), c.get('userId'));
   if (!ok) return c.json({ error: 'not found' }, 404);
   return c.json({ ok: true });
 });
 
 // Recall starting from this card. An optional `direction` steers the recall.
 cards.post('/:id/recall', async c => {
-  const card = getCard(c.req.param('id'));
+  const userId = c.get('userId');
+  const card = getCard(c.req.param('id'), userId);
   if (!card) return c.json({ error: 'not found' }, 404);
   const { direction } = await c.req.json().catch(() => ({}));
   const steer = typeof direction === 'string' ? direction.trim() : '';
-  return c.json(await recallFromCard(card.id, steer || undefined));
+  return c.json(await recallFromCard(card.id, userId, steer || undefined));
 });
 
 // Increment the reference count when the detail is opened from a recall result.
 cards.post('/:id/recall-hit', c => {
-  const card = getCard(c.req.param('id'));
+  const userId = c.get('userId');
+  const card = getCard(c.req.param('id'), userId);
   if (!card) return c.json({ error: 'not found' }, 404);
-  bumpRecallCount(card.id);
+  bumpRecallCount(card.id, userId);
   return c.json({ recall_count: card.recall_count + 1 });
 });
 
 // Return the source session's messages for viewing only.
 // (Not used for recall search or embeddings.)
 cards.get('/:id/transcript', c => {
-  const card = getCard(c.req.param('id'));
+  const card = getCard(c.req.param('id'), c.get('userId'));
   if (!card) return c.json({ error: 'not found' }, 404);
   const messages = card.session_id ? listMessages(card.session_id) : [];
   return c.json(messages);

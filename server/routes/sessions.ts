@@ -21,11 +21,14 @@ import { parsePlayerUrl } from '../player/parse-url.js';
 import { describePlayer } from '../player/describe-player.js';
 import { BLANK_METADATA_TEMPLATE } from '../cards/metadata-template.js';
 import type { Player } from '../player/provider.js';
+import type { AppEnv } from '../auth/require-user.js';
 
-export const sessions = new Hono();
+export const sessions = new Hono<AppEnv>();
 
 // Open sessions for the workspace sidebar.
-sessions.get('/', c => c.json(listActiveSessions().map(sessionToClient)));
+sessions.get('/', c =>
+  c.json(listActiveSessions(c.get('userId')).map(sessionToClient))
+);
 
 // Decide the title and artist from the input and the pasted URL. If either is
 // empty but a URL is present, fill it from the dedicated API metadata. Returns
@@ -55,6 +58,7 @@ async function resolveWork(
 // (a continued session). A memo is recorded as the user's own words (the
 // first user message) and answered.
 sessions.post('/', async c => {
+  const userId = c.get('userId');
   const { title, artist, memo, continueFromCardId, playerUrl } =
     await c.req.json();
 
@@ -78,11 +82,12 @@ sessions.post('/', async c => {
     typeof continueFromCardId === 'string' && continueFromCardId
       ? continueFromCardId
       : null;
-  const base = baseId ? getCard(baseId) : null;
+  const base = baseId ? getCard(baseId, userId) : null;
   // Seed the reference metadata: on a continued session from the base card so
   // its notes carry over, otherwise the blank template.
   const metadata = base?.metadata ?? BLANK_METADATA_TEMPLATE;
   const session = createSession(
+    userId,
     work.title,
     work.artist,
     metadata,
@@ -115,7 +120,7 @@ sessions.post('/', async c => {
 });
 
 sessions.get('/:id', c => {
-  const session = getSession(c.req.param('id'));
+  const session = getSession(c.req.param('id'), c.get('userId'));
   if (!session) return c.json({ error: 'not found' }, 404);
   return c.json({
     session: sessionToClient(session),
@@ -127,7 +132,8 @@ sessions.get('/:id', c => {
 // URL's metadata) and/or its freeform reference metadata. Title/artist are
 // required, so reject an empty value; metadata is freeform.
 sessions.patch('/:id', async c => {
-  const session = getSession(c.req.param('id'));
+  const userId = c.get('userId');
+  const session = getSession(c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   const { title, artist, metadata } = await c.req.json().catch(() => ({}));
   const next = {
@@ -138,28 +144,31 @@ sessions.patch('/:id', async c => {
   if (!next.title || !next.artist) {
     return c.json({ error: '対象とアーティストは空にできません' }, 400);
   }
-  const updated = editSessionWork(session.id, next);
+  const updated = editSessionWork(session.id, userId, next);
   return c.json(sessionToClient(updated!));
 });
 
 // Discard an open session (and its messages) from the workspace.
 sessions.delete('/:id', c => {
-  const session = getSession(c.req.param('id'));
+  const userId = c.get('userId');
+  const session = getSession(c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
-  deleteSession(session.id);
+  deleteSession(session.id, userId);
   return c.json({ ok: true });
 });
 
 // Ambient recall: related past cards for the whole conversation so far.
 // Embedding only (no LLM, no reason), meant to run after each Co-listener turn.
 sessions.post('/:id/related', async c => {
-  const session = getSession(c.req.param('id'));
+  const userId = c.get('userId');
+  const session = getSession(c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   const transcript = listMessages(session.id)
     .map(m => m.content)
     .join('\n');
   const related = await relatedToText(
     transcript,
+    userId,
     session.base_card_id ?? undefined
   );
   return c.json(related);
@@ -171,7 +180,7 @@ sessions.post('/:id/related', async c => {
 // runs a web search and returns the findings. In 'research' the body is
 // optional (empty means investigate the recent context).
 sessions.post('/:id/messages', async c => {
-  const session = getSession(c.req.param('id'));
+  const session = getSession(c.req.param('id'), c.get('userId'));
   if (!session) return c.json({ error: 'not found' }, 404);
   const { content, mode } = await c.req.json();
   const research = mode === 'research';
@@ -193,12 +202,13 @@ sessions.post('/:id/messages', async c => {
 // comment before recording"; if present, it is taken in as part of the session
 // (a user message) before compressing (no reply is generated).
 sessions.post('/:id/card', async c => {
-  const session = getSession(c.req.param('id'));
+  const userId = c.get('userId');
+  const session = getSession(c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   const { finalComment } = await c.req.json().catch(() => ({}));
   if (typeof finalComment === 'string' && finalComment.trim()) {
     addMessage(session.id, 'user', finalComment.trim());
   }
-  const card = await createCardFromSession(session.id);
+  const card = await createCardFromSession(session.id, userId);
   return c.json(cardToClient(card));
 });

@@ -6,8 +6,11 @@ import { cards } from './routes/cards.js';
 import { recallRoute } from './routes/recall.js';
 import { player } from './routes/player.js';
 import { usage } from './routes/usage.js';
+import { credentials } from './routes/credentials.js';
+import { account } from './routes/account.js';
+import { requireUser, type AppEnv } from './auth/require-user.js';
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
 
 // This is API-only. The browser should open Vite (default :5173).
 app.get('/', c =>
@@ -16,11 +19,17 @@ app.get('/', c =>
   )
 );
 
+// Everything under /api belongs to a signed-in account. Applied here rather
+// than per route so a new route cannot forget it.
+app.use('/api/*', requireUser);
+
 app.route('/api/sessions', sessions);
 app.route('/api/cards', cards);
 app.route('/api/recall', recallRoute);
 app.route('/api/player', player);
 app.route('/api/usage', usage);
+app.route('/api/credentials', credentials);
+app.route('/api/account', account);
 
 app.onError((err, c) => {
   console.error('[music-recall]', err);

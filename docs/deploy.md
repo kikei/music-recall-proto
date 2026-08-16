@@ -102,7 +102,7 @@ of the container's exposure — the proxy is the only way in.
 With Caddy on the host that is the entire configuration, certificate included:
 
 ```
-music.hotsp.jp {
+<domain> {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:8787
 }

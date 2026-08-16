@@ -1,5 +1,10 @@
-# Quadlet unit. Copy to /etc/containers/systemd/ and run `systemctl daemon-reload`;
-# systemd generates the service from this, so there is no unit file to maintain.
+# Quadlet unit. Copy to ~/.config/containers/systemd/ and run
+# `systemctl --user daemon-reload`; systemd generates the service from this, so
+# there is no unit file to maintain.
+#
+# Podman runs rootless, so this is a user unit rather than one in /etc, and the
+# host needs `loginctl enable-linger` for it to survive logout and come back at
+# boot. The env file must be readable by that same user.
 #
 # Deployment is pull-based: podman-auto-update.timer notices a new image and
 # replaces the container. Nothing needs to reach in from outside.

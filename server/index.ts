@@ -9,15 +9,13 @@ import { usage } from './routes/usage.js';
 import { credentials } from './routes/credentials.js';
 import { account } from './routes/account.js';
 import { requireUser, type AppEnv } from './auth/require-user.js';
+import { webApp, webAppAvailable } from './routes/web-app.js';
 
 const app = new Hono<AppEnv>();
 
-// This is API-only. The browser should open Vite (default :5173).
-app.get('/', c =>
-  c.text(
-    '音楽想起エンジンの API です。アプリは http://localhost:5173 を開いてください。'
-  )
-);
+// Answers before authentication and without touching the database, so a health
+// check says "the process is up and serving" and nothing more.
+app.get('/healthz', c => c.text('ok'));
 
 // Everything under /api belongs to a signed-in account. Applied here rather
 // than per route so a new route cannot forget it.
@@ -30,6 +28,19 @@ app.route('/api/player', player);
 app.route('/api/usage', usage);
 app.route('/api/credentials', credentials);
 app.route('/api/account', account);
+
+// After the API, so /api/* is never mistaken for a page. Without a build (a
+// bare API deployment, or the compiled server run from a checkout) the root
+// says where the app actually is.
+if (webAppAvailable) {
+  app.route('/', webApp);
+} else {
+  app.get('/', c =>
+    c.text(
+      '音楽想起エンジンの API です。アプリは http://localhost:5173 を開いてください。'
+    )
+  );
+}
 
 app.onError((err, c) => {
   console.error('[music-recall]', err);

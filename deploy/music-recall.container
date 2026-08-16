@@ -1,0 +1,39 @@
+# Quadlet unit. Copy to /etc/containers/systemd/ and run `systemctl daemon-reload`;
+# systemd generates the service from this, so there is no unit file to maintain.
+#
+# Deployment is pull-based: podman-auto-update.timer notices a new image and
+# replaces the container. Nothing needs to reach in from outside.
+[Unit]
+Description=music-recall
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/kikei/music-recall-proto:latest
+# Follow the tag: auto-update compares the registry's digest against the running
+# one and restarts only when it has moved.
+AutoUpdate=registry
+
+# Loopback only. TLS and the public name belong to the proxy in front.
+PublishPort=127.0.0.1:8787:8787
+
+# The database and its pre-migration backups live here, so a replaced container
+# keeps them.
+Volume=music-recall-data:/data
+
+# OIDC_ISSUER, OIDC_AUDIENCE, CREDENTIAL_SECRET and the shared player keys.
+# Keep it out of the repository and readable only by root.
+EnvironmentFile=/etc/music-recall/env
+
+# Gives auto-update something to judge by: a container that comes up unhealthy
+# is rolled back to the image it replaced.
+HealthCmd=node -e "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+HealthInterval=30s
+HealthStartPeriod=20s
+HealthRetries=3
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

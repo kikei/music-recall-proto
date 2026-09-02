@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import {
-  listCards,
+  listCardsForDisplay,
   getCard,
   bumpRecallCount,
   deleteCard,
@@ -14,7 +14,7 @@ import type { AppEnv } from '../auth/require-user.js';
 export const cards = new Hono<AppEnv>();
 
 cards.get('/', c => {
-  return c.json(listCards(c.get('userId')).map(toClient));
+  return c.json(listCardsForDisplay(c.get('userId')).map(toClient));
 });
 
 cards.get('/:id', c => {

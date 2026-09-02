@@ -71,6 +71,19 @@ export function listCards(userId: string): Card[] {
     .all(userId) as Card[];
 }
 
+// For the cards list and sidebar: every field the client shows, without the
+// embedding vector, which recall/related need but the client always discards.
+export function listCardsForDisplay(userId: string): Card[] {
+  return db
+    .prepare(
+      `SELECT id, user_id, session_id, title, artist, hook, recall_phrase,
+         background, metadata, created_at, updated_at, recall_count, player,
+         player_resolved
+       FROM cards WHERE user_id = ? ORDER BY updated_at DESC`
+    )
+    .all(userId) as Card[];
+}
+
 export function getCard(id: string, userId: string): Card | undefined {
   return db
     .prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?')

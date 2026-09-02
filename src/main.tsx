@@ -12,6 +12,16 @@ import {
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import './styles.css';
 
+// The SDK only requests discovery once it mounts and runs its effects; the
+// tenant origin is already known here from the build-time env, so start its
+// TLS handshake now instead of leaving it to queue behind that.
+if (isAuthConfigured) {
+  const link = document.createElement('link');
+  link.rel = 'preconnect';
+  link.href = new URL(logtoConfig.endpoint).origin;
+  document.head.appendChild(link);
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

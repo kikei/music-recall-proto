@@ -20,6 +20,10 @@ interface ModelConfig {
     expand: string;
     // Semantic search embedding for recall.
     embed: string;
+    // Ghost-text style example for the fragment input, seeded from the
+    // Co-listener's last message. Same "fast, structured, reasoning off"
+    // class as rank/expand.
+    suggest: string;
   };
   // Default web_search context size. Lower trims the retrieved content billed
   // as input tokens (the flat per-call fee is the same across sizes).
@@ -38,6 +42,7 @@ export const modelConfig: ModelConfig = {
     compress: 'gpt-5-mini',
     expand: 'gpt-5.6-luna',
     embed: 'text-embedding-3-small',
+    suggest: 'gpt-5.6-luna',
   },
   webSearchContext: 'low',
   modelOptions: {

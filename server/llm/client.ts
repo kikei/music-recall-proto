@@ -16,3 +16,4 @@ export const rankModel = modelConfig.models.rank;
 export const compressModel = modelConfig.models.compress;
 export const expandModel = modelConfig.models.expand;
 export const embedModel = modelConfig.models.embed;
+export const suggestModel = modelConfig.models.suggest;

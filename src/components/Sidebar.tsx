@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Session, Card } from '../api/client.js';
 import { AutoTextarea } from './AutoTextarea.js';
 import { AccountPanel } from '../auth/AccountPanel.js';
+import { pickCueExample } from '../lib/recall-cue-examples.js';
 
 // Left rail: the brand (home) with a + to start a session, a recall input, the
 // open sessions, and recent cards ending in a link to all of them. Account
@@ -38,6 +39,7 @@ export function Sidebar({
   onRecall: (query: string) => void;
 }) {
   const [query, setQuery] = useState('');
+  const [cueExample] = useState(pickCueExample);
 
   function submit() {
     if (!query.trim()) return;
@@ -62,7 +64,7 @@ export function Sidebar({
       <div className="side-section side-recall">
         <AutoTextarea
           className="recall-input"
-          placeholder="今のきっかけ (例: 反復から行進感に変わる録音)"
+          placeholder={`例: ${cueExample}`}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => {

@@ -7,6 +7,7 @@ import {
   relatedToSession,
   recallHit,
   editSession,
+  suggestFragment,
   type Session,
   type ChatMessage,
   type Card,
@@ -40,6 +41,7 @@ export function SessionView({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fragmentExample, setFragmentExample] = useState<string | null>(null);
 
   // Open a recalled card inline (keeping the session), bumping its reference
   // count like any recall hit.
@@ -67,6 +69,26 @@ export function SessionView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Ghost-text example for the fragment input, seeded from the Co-listener's
+  // latest message. Refetched whenever the conversation advances, so a fresh
+  // example is ready by the time the listener looks at the empty input rather
+  // than generated per keystroke.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    let cancelled = false;
+    suggestFragment(sessionId)
+      .then(res => {
+        if (!cancelled) setFragmentExample(res.suggestion);
+      })
+      .catch(() => {
+        // Best-effort; keep whatever example (or none) was already shown.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // Update this session's work (title/artist) or its reference metadata.
   async function saveWork(patch: {
@@ -147,7 +169,7 @@ export function SessionView({
           <strong>
             <InlineEditText
               value={session.title}
-              ariaLabel="対象"
+              ariaLabel="楽曲・アルバム"
               onSave={v => saveWork({ title: v })}
             />
           </strong>{' '}
@@ -165,6 +187,7 @@ export function SessionView({
         <FragmentInput
           busy={busy}
           value={draft}
+          example={fragmentExample}
           onChange={setDraft}
           onSend={send}
           onResearch={investigate}
@@ -226,12 +249,16 @@ function ChatLog({ messages }: { messages: ChatMessage[] }) {
 function FragmentInput({
   busy,
   value,
+  example,
   onChange,
   onSend,
   onResearch,
 }: {
   busy: boolean;
   value: string;
+  // LLM-generated, seeded from the Co-listener's last message. null while
+  // loading or on fetch failure; shown as a plain placeholder, never inserted.
+  example: string | null;
   onChange: (text: string) => void;
   onSend: () => void;
   onResearch: () => void;
@@ -239,7 +266,7 @@ function FragmentInput({
   return (
     <div className="fragment-input">
       <AutoTextarea
-        placeholder="例: 金属音が反復していて、だんだん行進みたいに聞こえる"
+        placeholder={example ?? ''}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => {

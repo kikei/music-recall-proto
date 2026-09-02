@@ -35,7 +35,7 @@ export function CardView({
         {titleAction && <span className="card-actions">{titleAction}</span>}
       </h3>
       <dl className="card-fields">
-        <dt>引っかかり</dt>
+        <dt>心に残った理由</dt>
         <dd>{card.hook}</dd>
         <dt>想起フレーズ</dt>
         <dd className="recall-phrase">{card.recall_phrase}</dd>

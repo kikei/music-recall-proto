@@ -216,6 +216,7 @@ export function App() {
               direction={view.direction ?? null}
               fromCard={view.from ?? null}
               onOpenCard={openCard}
+              onNew={() => setView({ kind: 'new' })}
             />
           )}
           {view.kind === 'card' && (

@@ -15,11 +15,13 @@ export function RecallScreen({
   direction,
   fromCard,
   onOpenCard,
+  onNew,
 }: {
   query: string | null;
   direction: string | null;
   fromCard: RecallFromCardRequest | null;
   onOpenCard: (cardId: string, fromRecall: boolean) => void;
+  onNew: () => void;
 }) {
   const [results, setResults] = useState<RecallResult[] | null>(null);
   const [busy, setBusy] = useState(true);
@@ -50,7 +52,12 @@ export function RecallScreen({
       {busy && <p className="hint">想起中…</p>}
       {error && <p className="error">{error}</p>}
       {results && results.length === 0 && (
-        <p className="hint">浮上したカードはありませんでした。</p>
+        <div className="recall-empty">
+          <p className="hint">セッションで聴いた音楽が、想起の手がかりになります。</p>
+          <button className="rail-detail-link" onClick={onNew}>
+            セッションを始める
+          </button>
+        </div>
       )}
       {results && results.length > 0 && (
         <RecallResultList

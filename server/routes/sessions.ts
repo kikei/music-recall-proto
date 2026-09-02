@@ -15,6 +15,7 @@ import {
   researchSession,
 } from '../llm/chat.js';
 import { createCardFromSession } from '../cards/from-session.js';
+import { suggestFragment } from '../llm/suggest.js';
 import { cardToClient } from '../cards/to-client.js';
 import { sessionToClient } from '../sessions/to-client.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
@@ -172,6 +173,21 @@ sessions.post('/:id/related', async c => {
     session.base_card_id ?? undefined
   );
   return c.json(related);
+});
+
+// Ghost-text example for the fragment input, seeded from the most recent
+// Co-listener message. Meant to be fetched once per turn (e.g. on focus), not
+// on every keystroke. null when there is no assistant message yet.
+sessions.get('/:id/suggest', async c => {
+  const userId = c.get('userId');
+  const session = getSession(c.req.param('id'), userId);
+  if (!session) return c.json({ error: 'not found' }, 404);
+  const last = [...listMessages(session.id)]
+    .reverse()
+    .find(m => m.role === 'assistant');
+  if (!last) return c.json({ suggestion: null });
+  const suggestion = await suggestFragment(last.content);
+  return c.json({ suggestion });
 });
 
 // Posting a fragment makes the Co-listener help articulate it. mode: 'comment'

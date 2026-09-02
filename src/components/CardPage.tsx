@@ -89,7 +89,7 @@ export function CardPage({
 
   async function remove() {
     if (!card) return;
-    if (!window.confirm('このカードを削除しますか? (元に戻せません)')) return;
+    if (!window.confirm('このカードを削除しますか?')) return;
     setBusy(true);
     setError('');
     try {
@@ -153,7 +153,7 @@ export function CardPage({
               <span className="recall-action">
                 <input
                   className="recall-dir"
-                  placeholder="方向 (例: ジャズっぽいもの)"
+                  placeholder="追加の方向 (例: もっと開放的な感じ)"
                   value={direction}
                   onChange={e => setDirection(e.target.value)}
                   onKeyDown={e => {

@@ -15,22 +15,35 @@ function required(name: string): string {
 }
 
 let cachedKeys: ReturnType<typeof createRemoteJWKSet> | null = null;
+// The in-flight discovery fetch, if any. Concurrent requests arriving before
+// cachedKeys is set must share this rather than each starting their own
+// discovery + JWKS round trip to the provider.
+let keysPromise: Promise<ReturnType<typeof createRemoteJWKSet>> | null = null;
 
 // Resolve the JWKS endpoint through discovery once; jose then caches and
 // rotates the signing keys itself.
 async function signingKeys(): Promise<ReturnType<typeof createRemoteJWKSet>> {
   if (cachedKeys) return cachedKeys;
-  const issuer = required('OIDC_ISSUER').replace(/\/$/, '');
-  const res = await fetch(`${issuer}/.well-known/openid-configuration`);
-  if (!res.ok) {
-    throw new Error(`OIDC の設定を取得できません (${res.status})`);
+  if (!keysPromise) {
+    keysPromise = (async () => {
+      const issuer = required('OIDC_ISSUER').replace(/\/$/, '');
+      const res = await fetch(`${issuer}/.well-known/openid-configuration`);
+      if (!res.ok) {
+        throw new Error(`OIDC の設定を取得できません (${res.status})`);
+      }
+      const config = (await res.json()) as { jwks_uri?: string };
+      if (!config.jwks_uri) {
+        throw new Error('OIDC の設定に jwks_uri がありません');
+      }
+      cachedKeys = createRemoteJWKSet(new URL(config.jwks_uri));
+      return cachedKeys;
+    })();
+    // A failed discovery must not stick: let the next call try again.
+    keysPromise.catch(() => {
+      keysPromise = null;
+    });
   }
-  const config = (await res.json()) as { jwks_uri?: string };
-  if (!config.jwks_uri) {
-    throw new Error('OIDC の設定に jwks_uri がありません');
-  }
-  cachedKeys = createRemoteJWKSet(new URL(config.jwks_uri));
-  return cachedKeys;
+  return keysPromise;
 }
 
 export const oidcVerifier: TokenVerifier = {

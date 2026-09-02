@@ -49,7 +49,7 @@ export function CardEditForm({
         <CardTitleText card={card} onEditField={onEditField} />
       </h3>
       <label className="field">
-        <span>引っかかり</span>
+        <span>心に残った理由</span>
         <AutoTextarea value={hook} onChange={e => setHook(e.target.value)} />
       </label>
       <label className="field">

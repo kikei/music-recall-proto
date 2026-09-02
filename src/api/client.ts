@@ -266,6 +266,14 @@ export function relatedToSession(sessionId: string): Promise<Card[]> {
   return request(`/api/sessions/${sessionId}/related`, { method: 'POST' });
 }
 
+// Ghost-text example for the fragment input, seeded from the Co-listener's
+// last message. null when there is no assistant message yet.
+export function suggestFragment(
+  sessionId: string
+): Promise<{ suggestion: string | null }> {
+  return request(`/api/sessions/${sessionId}/suggest`);
+}
+
 // Third-party API keys an account supplies. The secret is only ever sent to the
 // server; what comes back is whether it is set plus a few trailing characters.
 export type CredentialKind =

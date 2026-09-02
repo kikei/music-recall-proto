@@ -33,8 +33,9 @@ export async function rankRecall(
     )
     .join('\n---\n');
   const steer = direction
-    ? `\n\n想起の方向性 (この方向に沿う候補をやや優先しつつ、きっかけとの` +
-      `接続を最優先する): ${direction}`
+    ? `\n\n想起の方向性: ${direction}\nユーザーが明示的に指定した希望なので、` +
+      `優先して沿わせること。きっかけとの繋がりが薄い候補でも、この方向に` +
+      `合っていれば採用してよい。`
     : '';
   const user =
     `今のきっかけ:\n${query}${steer}\n\n` + `=== 再会カード候補 ===\n${cards}`;

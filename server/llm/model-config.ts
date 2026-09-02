@@ -33,10 +33,10 @@ interface ModelConfig {
 export const modelConfig: ModelConfig = {
   provider: 'openai',
   models: {
-    chat: 'gpt-5.1',
-    rank: 'gpt-5.4-nano',
-    compress: 'gpt-5.4-mini',
-    expand: 'gpt-5.4-nano',
+    chat: 'gpt-5.6-terra',
+    rank: 'gpt-5.6-luna',
+    compress: 'gpt-5-mini',
+    expand: 'gpt-5.6-luna',
     embed: 'text-embedding-3-small',
   },
   webSearchContext: 'low',
@@ -44,7 +44,7 @@ export const modelConfig: ModelConfig = {
     // Structured retrieval tasks (rerank, cue expansion) run on small reasoning
     // models. Turning reasoning off keeps them from spending thousands of slow
     // output tokens for no quality gain.
-    'gpt-5.4-nano': { reasoning_effort: 'none' },
+    'gpt-5.6-luna': { reasoning_effort: 'none' },
     'gpt-5-nano': { reasoning_effort: 'none' },
   },
 };

@@ -12,16 +12,22 @@ interface Rate {
 }
 
 const rates: Record<string, Rate> = {
+  'gpt-5.6-sol': { input: 4, cachedInput: 0.4, output: 20 },
+  'gpt-5.6-terra': { input: 2, cachedInput: 0.2, output: 12 },
+  'gpt-5.6-luna': { input: 0.2, cachedInput: 0.02, output: 1.2 },
   'gpt-5.5': { input: 5, cachedInput: 0.5, output: 30 },
   'gpt-5.4': { input: 2.5, cachedInput: 0.25, output: 15 },
-  'gpt-5.4-mini': { input: 0.75, cachedInput: 0.075, output: 4.5 },
-  'gpt-5.4-nano': { input: 0.2, cachedInput: 0.02, output: 1.25 },
+  // cachedInput not published for this tier; inferred from the ~10%-of-input
+  // ratio that holds for every other model in this table.
+  'gpt-5-mini': { input: 0.25, cachedInput: 0.025, output: 2 },
   'text-embedding-3-small': { input: 0.02, cachedInput: 0.02, output: 0 },
   'text-embedding-3-large': { input: 0.13, cachedInput: 0.13, output: 0 },
 };
 
-// Flat per-call fee for a web search ($10 / 1k calls). The retrieved content is
-// already counted in inputTokens, so only the call fee is added here.
+// Flat per-call fee for a web search. OpenAI splits this $10 / 1k calls for
+// reasoning models vs $25 / 1k for non-reasoning models; which bucket the
+// current chat model (gpt-5.6-terra) falls into hasn't been confirmed against
+// actual billing yet, so this may be understating real cost by up to 2.5x.
 const WEB_SEARCH_USD_PER_CALL = 0.01;
 
 export function estimateCost(model: string, usage: LlmUsage): number | null {

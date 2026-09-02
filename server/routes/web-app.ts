@@ -16,6 +16,12 @@ export const webAppAvailable = existsSync(root);
 export const webApp = new Hono();
 
 if (webAppAvailable) {
+  // Vite fingerprints these filenames by content hash, so a given path never
+  // changes meaning: safe to cache for as long as the browser will keep it.
+  webApp.use('/assets/*', async (c, next) => {
+    await next();
+    c.header('cache-control', 'public, max-age=31536000, immutable');
+  });
   webApp.use('/assets/*', serveStatic({ root }));
   webApp.get('/favicon.ico', serveStatic({ path: `${root}/favicon.ico` }));
   // Everything else is the single page app: sign-in lands on /callback, and a

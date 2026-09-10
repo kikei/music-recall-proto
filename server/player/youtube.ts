@@ -10,6 +10,9 @@ export function youtubeConfigured(): boolean {
 export interface YouTubeMeta {
   title: string;
   channelTitle: string;
+  // Upload date, used as the auto-filled Released value. Strictly an upload
+  // date, not a verified release date, but treated as close enough.
+  publishedAt?: string;
 }
 
 // Return info if the videoId exists and is embeddable, otherwise null.
@@ -23,7 +26,11 @@ export async function youtubeLookup(id: string): Promise<YouTubeMeta | null> {
   if (!res.ok) return null;
   const json = (await res.json()) as {
     items?: {
-      snippet?: { title?: string; channelTitle?: string };
+      snippet?: {
+        title?: string;
+        channelTitle?: string;
+        publishedAt?: string;
+      };
       status?: { embeddable?: boolean };
     }[];
   };
@@ -32,6 +39,7 @@ export async function youtubeLookup(id: string): Promise<YouTubeMeta | null> {
   return {
     title: item.snippet?.title ?? '',
     channelTitle: item.snippet?.channelTitle ?? '',
+    publishedAt: item.snippet?.publishedAt,
   };
 }
 

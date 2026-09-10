@@ -19,9 +19,13 @@ import { suggestFragment } from '../llm/suggest.js';
 import { cardToClient } from '../cards/to-client.js';
 import { sessionToClient } from '../sessions/to-client.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
-import { describePlayer } from '../player/describe-player.js';
+import {
+  resolvePastedMetadata,
+  composePastedMetadata,
+  type PastedLookup,
+  type PastedMetadataExtras,
+} from '../cards/resolve-pasted-metadata.js';
 import { BLANK_METADATA_TEMPLATE } from '../cards/metadata-template.js';
-import type { Player } from '../player/provider.js';
 import type { AppEnv } from '../auth/require-user.js';
 
 export const sessions = new Hono<AppEnv>();
@@ -31,26 +35,42 @@ sessions.get('/', c =>
   c.json(listActiveSessions(c.get('userId')).map(sessionToClient))
 );
 
-// Decide the title and artist from the input and the pasted URL. If either is
-// empty but a URL is present, fill it from the dedicated API metadata. Returns
-// null unless both are present.
-async function resolveWork(
+// Decide the title and artist from the input and a pasted URL's lookup. If
+// either is empty, fill it from the lookup. Returns null unless both end up
+// present.
+function resolveWork(
   title: unknown,
   artist: unknown,
-  pasted: Player | null
-): Promise<{ title: string; artist: string } | null> {
+  pastedLookup: PastedLookup | null
+): { title: string; artist: string } | null {
   let workTitle = typeof title === 'string' ? title.trim() : '';
   let workArtist = typeof artist === 'string' ? artist.trim() : '';
-  if (pasted && (!workTitle || !workArtist)) {
-    const meta = await describePlayer(pasted);
-    if (meta) {
-      workTitle = workTitle || meta.title;
-      workArtist = workArtist || meta.artist;
-    }
+  if (pastedLookup) {
+    workTitle = workTitle || pastedLookup.title;
+    workArtist = workArtist || pastedLookup.artist;
   }
   return workTitle && workArtist
     ? { title: workTitle, artist: workArtist }
     : null;
+}
+
+// Read the account's own edits to the start form's album/released/label
+// preview. Undefined (not an object at all) means no lookup ever succeeded
+// client-side, as opposed to an empty string, which means the account
+// reviewed the field and left/made it blank.
+function parseMetadataExtras(input: unknown): PastedMetadataExtras | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  const pick = (key: string): string | undefined => {
+    const value = obj[key];
+    if (typeof value !== 'string') return undefined;
+    return value.trim() || undefined;
+  };
+  return {
+    album: pick('album'),
+    released: pick('released'),
+    label: pick('label'),
+  };
 }
 
 // Start a session: title, artist, memo (optional), continueFromCardId
@@ -60,7 +80,7 @@ async function resolveWork(
 // first user message) and answered.
 sessions.post('/', async c => {
   const userId = c.get('userId');
-  const { title, artist, memo, continueFromCardId, playerUrl } =
+  const { title, artist, memo, continueFromCardId, playerUrl, metadataExtras } =
     await c.req.json();
 
   // If a URL was pasted at start, parse it syntactically and attach it to the
@@ -69,7 +89,13 @@ sessions.post('/', async c => {
     typeof playerUrl === 'string' ? playerUrl : null
   );
 
-  const work = await resolveWork(title, artist, pasted);
+  // A pasted link is looked up once here (regardless of whether title/artist
+  // are already filled in), since its response is also the fallback source
+  // for metadataExtras below if the account submits before the start form's
+  // own lookup resolves.
+  const pastedLookup = pasted ? await resolvePastedMetadata(pasted) : null;
+
+  const work = resolveWork(title, artist, pastedLookup);
   if (!work) {
     return c.json(
       { error: '対象とアーティストを入力するか、視聴 URL を貼ってください' },
@@ -85,8 +111,14 @@ sessions.post('/', async c => {
       : null;
   const base = baseId ? getCard(baseId, userId) : null;
   // Seed the reference metadata: on a continued session from the base card so
-  // its notes carry over, otherwise the blank template.
-  const metadata = base?.metadata ?? BLANK_METADATA_TEMPLATE;
+  // its notes carry over, otherwise the blank template. Track/Album and
+  // Artist(s) are always derived from the work decided above (not copied
+  // from the lookup), so they can never go stale relative to an edited
+  // title/artist; album/released/label come from the account's own review
+  // in the start form (or, failing that, straight from the lookup).
+  const seedMetadata = base?.metadata ?? BLANK_METADATA_TEMPLATE;
+  const extras = parseMetadataExtras(metadataExtras) ?? pastedLookup?.extras;
+  const metadata = composePastedMetadata(seedMetadata, pasted, work, extras);
   const session = createSession(
     userId,
     work.title,

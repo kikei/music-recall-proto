@@ -93,11 +93,21 @@ async function authorization(): Promise<Record<string, string>> {
   }
 }
 
+export interface MetadataExtras {
+  album?: string;
+  released?: string;
+  label?: string;
+}
+
 export function createSession(
   title: string,
   artist: string,
   memo: string,
-  options?: { continueFromCardId?: string; playerUrl?: string }
+  options?: {
+    continueFromCardId?: string;
+    playerUrl?: string;
+    metadataExtras?: MetadataExtras;
+  }
 ): Promise<{ session: Session; messages: ChatMessage[] }> {
   return request('/api/sessions', {
     method: 'POST',
@@ -107,6 +117,7 @@ export function createSession(
       memo,
       continueFromCardId: options?.continueFromCardId,
       playerUrl: options?.playerUrl,
+      metadataExtras: options?.metadataExtras,
     }),
   });
 }
@@ -218,9 +229,17 @@ export function getCardTranscript(cardId: string): Promise<ChatMessage[]> {
 export interface PlayerMeta {
   title: string;
   artist: string;
+  // Whether "album" is a meaningful, separate field (true: the link is a
+  // track with its own parent album), redundant with the title (false: the
+  // link is the album itself), or not applicable (null: e.g. a playlist).
+  trackLevel: boolean | null;
+  album?: string;
+  released?: string;
+  label?: string;
 }
 
-// Get the title and artist from a pasted player URL (for the start form).
+// Get title/artist and any extra reference metadata from a pasted player
+// URL (for the start form's auto-fill and its metadata preview).
 export function lookupPlayer(url: string): Promise<PlayerMeta> {
   return request(`/api/player/lookup?url=${encodeURIComponent(url)}`);
 }

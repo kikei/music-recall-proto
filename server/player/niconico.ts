@@ -4,6 +4,9 @@
 export interface NiconicoMeta {
   title: string;
   author: string;
+  // Upload date, used as the auto-filled Released value. Strictly an upload
+  // date, not a verified release date, but treated as close enough.
+  publishedAt?: string;
 }
 
 // Minimal XML entity decoding (only what appears in getthumbinfo output).
@@ -34,5 +37,9 @@ export async function niconicoLookup(id: string): Promise<NiconicoMeta | null> {
   const title = tagText(xml, 'title');
   if (!title) return null;
   const author = tagText(xml, 'user_nickname') ?? tagText(xml, 'ch_name') ?? '';
-  return { title, author };
+  return {
+    title,
+    author,
+    publishedAt: tagText(xml, 'first_retrieve') ?? undefined,
+  };
 }

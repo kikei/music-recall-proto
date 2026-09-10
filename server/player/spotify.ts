@@ -43,9 +43,15 @@ export function spotifyConfigured(): boolean {
 export interface SpotifyMeta {
   name: string;
   artistNames: string[];
+  albumName?: string; // track kind only: its parent album's name
+  releaseDate?: string;
+  label?: string; // album kind only: absent from a track's embedded album
 }
 
-// Verify existence by id and return name and artists. Null if not found.
+// Verify existence by id and return its metadata. Null if not found. Also
+// the source for metadata auto-fill: the same response carries release_date
+// and (album kind) label alongside name/artists, so no extra request is
+// needed to fill the reference metadata template.
 export async function spotifyLookup(
   kind: 'album' | 'track' | 'playlist',
   id: string
@@ -59,11 +65,17 @@ export async function spotifyLookup(
   const json = (await res.json()) as {
     name?: string;
     artists?: { name: string }[];
+    release_date?: string;
+    label?: string;
+    album?: { name?: string; release_date?: string };
   };
   if (!json.name) return null;
   return {
     name: json.name,
     artistNames: (json.artists ?? []).map(a => a.name),
+    albumName: json.album?.name,
+    releaseDate: json.release_date ?? json.album?.release_date,
+    label: json.label,
   };
 }
 

@@ -4,12 +4,26 @@
 export interface AppleMeta {
   title: string;
   artist: string;
+  albumName?: string;
+  trackName?: string; // only set when a specific track/song was resolved
+  releaseDate?: string;
+  label?: string; // best-effort, parsed out of the copyright line
 }
 
 interface LookupResult {
   trackName?: string;
   collectionName?: string;
   artistName?: string;
+  releaseDate?: string;
+  copyright?: string;
+}
+
+// The copyright line reads like "℗ 1997 XL Recordings Ltd." Strip the
+// leading ℗/© mark and year, keeping whatever names the label. Best-effort:
+// returns undefined rather than a guess when the shape doesn't match.
+function labelFromCopyright(copyright: string | undefined): string | undefined {
+  const m = copyright?.match(/^[℗©]\s*\d{4}\s+(.+)$/);
+  return m?.[1].trim() || undefined;
 }
 
 // Apple appends a release-type suffix to single/EP names (e.g.
@@ -36,5 +50,14 @@ export async function appleLookup(
   const title = r.trackName || r.collectionName;
   const artist = r.artistName;
   if (!title || !artist) return null;
-  return { title: stripReleaseSuffix(title), artist };
+  return {
+    title: stripReleaseSuffix(title),
+    artist,
+    albumName: r.collectionName
+      ? stripReleaseSuffix(r.collectionName)
+      : undefined,
+    trackName: r.trackName ? stripReleaseSuffix(r.trackName) : undefined,
+    releaseDate: r.releaseDate,
+    label: labelFromCopyright(r.copyright),
+  };
 }

@@ -21,6 +21,15 @@ export function StartSessionForm({
   const [showServices, setShowServices] = useState(false);
   const servicesRef = useRef<HTMLSpanElement>(null);
 
+  // Reference metadata picked up from a pasted URL's lookup, shown and
+  // editable right alongside title/artist so a correction happens in one
+  // pass instead of a separate visit to the metadata editor later.
+  const [trackLevel, setTrackLevel] = useState<boolean | null>(null);
+  const [album, setAlbum] = useState('');
+  const [released, setReleased] = useState('');
+  const [label, setLabel] = useState('');
+  const [lookedUp, setLookedUp] = useState(false);
+
   // Close the supported-services popover on an outside click.
   useEffect(() => {
     if (!showServices) return;
@@ -36,12 +45,19 @@ export function StartSessionForm({
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [showServices]);
 
-  // Each time a URL is pasted (or re-pasted), fetch the title/artist and
-  // overwrite. Query after a short wait; drop in-flight results if the URL
-  // changes.
+  // Each time a URL is pasted (or re-pasted), fetch the title/artist and any
+  // extra reference metadata, and overwrite. Query after a short wait; drop
+  // in-flight results if the URL changes.
   useEffect(() => {
     const url = playerUrl.trim();
-    if (!url) return;
+    if (!url) {
+      setLookedUp(false);
+      setTrackLevel(null);
+      setAlbum('');
+      setReleased('');
+      setLabel('');
+      return;
+    }
     let cancelled = false;
     const timer = setTimeout(async () => {
       setLooking(true);
@@ -50,8 +66,21 @@ export function StartSessionForm({
         if (cancelled) return;
         setTitle(meta.title);
         setArtist(meta.artist);
+        setTrackLevel(meta.trackLevel);
+        setAlbum(meta.album ?? '');
+        setReleased(meta.released ?? '');
+        setLabel(meta.label ?? '');
+        setLookedUp(true);
       } catch {
-        // If lookup fails, leave it to manual input
+        // If lookup fails, leave it to manual input - but not if a newer
+        // paste already resolved first (this stale one arriving late must
+        // not clobber that result).
+        if (cancelled) return;
+        setLookedUp(false);
+        setTrackLevel(null);
+        setAlbum('');
+        setReleased('');
+        setLabel('');
       } finally {
         if (!cancelled) setLooking(false);
       }
@@ -68,6 +97,7 @@ export function StartSessionForm({
     try {
       const res = await createSession(title, artist, memo.trim(), {
         playerUrl: playerUrl.trim() || undefined,
+        metadataExtras: lookedUp ? { album, released, label } : undefined,
       });
       onStarted(res.session);
     } catch (e) {
@@ -107,8 +137,7 @@ export function StartSessionForm({
                       : 'field-hint-popover'
                   }
                 >
-                  対応サービス: Spotify / Apple Music / YouTube /
-                  ニコニコ動画
+                  対応サービス: Spotify / Apple Music / YouTube / ニコニコ動画
                 </span>
               </span>
             </span>
@@ -120,7 +149,13 @@ export function StartSessionForm({
           </label>
           {looking && <p className="hint">URL からデータを取得しています…</p>}
           <label className="field">
-            <span className="field-label">楽曲・アルバム</span>
+            <span className="field-label">
+              {trackLevel === true
+                ? '楽曲'
+                : trackLevel === false
+                  ? 'アルバム'
+                  : '楽曲・アルバム'}
+            </span>
             <input
               placeholder="例: Kid A / Idioteque / ○○のライブ盤"
               value={title}
@@ -135,6 +170,30 @@ export function StartSessionForm({
               onChange={e => setArtist(e.target.value)}
             />
           </label>
+          {lookedUp && (
+            <div className="start-metadata-preview">
+              {trackLevel === true && (
+                <label className="field">
+                  <span className="field-label">アルバム (任意)</span>
+                  <input
+                    value={album}
+                    onChange={e => setAlbum(e.target.value)}
+                  />
+                </label>
+              )}
+              <label className="field">
+                <span className="field-label">発売日 (任意)</span>
+                <input
+                  value={released}
+                  onChange={e => setReleased(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">レーベル (任意)</span>
+                <input value={label} onChange={e => setLabel(e.target.value)} />
+              </label>
+            </div>
+          )}
           {title.trim() && artist.trim() && (
             <label className="field field-memo">
               <span className="field-label">感じたこと・気づいたこと</span>

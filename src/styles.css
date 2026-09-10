@@ -1394,6 +1394,21 @@ button.primary {
   margin-bottom: 12px;
 }
 
+/* The lookup's album/released/label preview, shown inline with title/artist
+   rather than tucked away in a separate editor, so a correction happens in
+   the same pass. */
+.start-metadata-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.start-metadata-preview .field {
+  flex: 1 1 140px;
+  margin-bottom: 0;
+}
+
 /* Set apart from the title/artist/URL group above it: it only appears once
    those are filled in, so a rule plus extra top space reads as a separate
    step rather than another item in the same list. */

@@ -13,10 +13,12 @@
 
 ## スタック
 
-- フロント: Vite + React 19 (`src/`)。`screens/` に 3 画面、`api/` がクライアント。
+- フロント: Vite + React 19 (`src/`)。`screens/` に 5 画面 (`CardsScreen` /
+  `RecallScreen` / `SessionScreen` / `SettingsScreen` / `StartSessionForm`)、
+  `api/` がクライアント。
 - バックエンド: Hono + @hono/node-server (`server/`)。`db/` データ層、
-  `llm/` OpenAI 連携、`cards/` 想起とカード生成、`player/` プレイヤー解決、
-  `routes/` エンドポイント。
+  `llm/` OpenAI 連携、`cards/` 想起とカード生成、`player/` プレイヤー解決
+  (Spotify / Apple Music / YouTube / ニコニコ動画)、`routes/` エンドポイント。
 - 保存: better-sqlite3。DB は `data/music-recall.sqlite` (`DB_PATH` で上書き可)。
 - 認証: Logto (標準 OIDC)。`server/auth/` が seam で、サーバは `jose` による
   JWKS 検証しか知らない (ベンダ固有 SDK をサーバに入れない)。
@@ -52,18 +54,21 @@
 
 ## プレイヤー解決
 
-- LLM は使わない。Spotify / YouTube は各 Search API、ニコニコ動画は公開の
-  getthumbinfo API で解決する。
+- LLM は使わない。Spotify / YouTube は各 Search API、Apple Music はキー不要の
+  lookup API、ニコニコ動画は公開の getthumbinfo API で解決する。
 - セッション開始時に URL を貼ればそのまま埋め込むため、API キーなしで動く。
-  ニコニコもキー不要。Spotify / YouTube のキーは「URL 未指定時の自動解決」に
-  だけ使う。詳細は [docs/player-api-keys.txt](./docs/player-api-keys.txt)。
+  Apple Music とニコニコもキー不要。Spotify / YouTube のキーは「URL 未指定時
+  の自動解決」にだけ使う。詳細は
+  [docs/player-api-keys.txt](./docs/player-api-keys.txt)。
 
 ## 開発と検証
 
 - 起動: `npm run dev` (バックエンド :8787 とフロント :5173 を同時起動)。
 - 整形: `npm run format` (Prettier)。
-- テストスイートは無い。変更後は `npx tsc --noEmit` と `npx vite build` で
-  型と本番ビルドを確認する。
+- テスト: `npm test` (Vitest)。網羅はしておらず、壊れたら痛い純粋関数
+  (メタデータ雛形の穴埋め、プレイヤー URL のパース・解決、想起の類似度計算
+  など) の一部をカバーする。変更後は `npx tsc --noEmit` と `npx vite build`
+  でも型と本番ビルドを確認する。
 - better-sqlite3 はネイティブビルドを伴うため、`npm install` にはビルド環境が
   必要。
 

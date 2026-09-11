@@ -16,7 +16,8 @@ function normalize(s: string): string {
 }
 
 // Treat as a match if either contains the other (absorbs symbol/paren diffs).
-function looselyMatches(candidate: string, want: string): boolean {
+// Exported for testing; also used directly by resolvePlayer's candidate scan.
+export function looselyMatches(candidate: string, want: string): boolean {
   const a = normalize(candidate);
   const b = normalize(want);
   if (!a || !b) return false;
@@ -24,7 +25,7 @@ function looselyMatches(candidate: string, want: string): boolean {
 }
 
 // Whether any candidate matches the artist name.
-function artistMatches(candidates: string[], artist: string): boolean {
+export function artistMatches(candidates: string[], artist: string): boolean {
   return candidates.some(c => looselyMatches(c, artist));
 }
 

@@ -18,36 +18,35 @@ db.pragma('journal_mode = WAL');
 // numbered migrations (see runMigrations below), not edits to this baseline.
 db.exec(schema);
 
-// Retrofit migrations for existing DBs. Ignore if the column already exists.
-try {
-  db.exec(
-    'ALTER TABLE cards ADD COLUMN recall_count INTEGER NOT NULL DEFAULT 0'
-  );
-} catch {
-  // cards.recall_count already exists
+// These columns predate the versioned migration table. Check the schema
+// explicitly so only the expected "already exists" case is skipped; an actual
+// ALTER TABLE failure must stop startup.
+function addLegacyColumn(
+  table: 'cards' | 'sessions',
+  column: string,
+  definition: string
+) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as {
+    name: string;
+  }[];
+  if (!columns.some(existing => existing.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+  }
 }
-try {
-  db.exec('ALTER TABLE sessions ADD COLUMN base_card_id TEXT');
-} catch {
-  // sessions.base_card_id already exists
-}
-try {
-  db.exec('ALTER TABLE sessions ADD COLUMN player TEXT');
-} catch {
-  // sessions.player already exists
-}
-try {
-  db.exec('ALTER TABLE cards ADD COLUMN player TEXT');
-} catch {
-  // cards.player already exists
-}
-try {
-  db.exec(
-    'ALTER TABLE cards ADD COLUMN player_resolved INTEGER NOT NULL DEFAULT 0'
-  );
-} catch {
-  // cards.player_resolved already exists
-}
+
+addLegacyColumn(
+  'cards',
+  'recall_count',
+  'recall_count INTEGER NOT NULL DEFAULT 0'
+);
+addLegacyColumn('sessions', 'base_card_id', 'base_card_id TEXT');
+addLegacyColumn('sessions', 'player', 'player TEXT');
+addLegacyColumn('cards', 'player', 'player TEXT');
+addLegacyColumn(
+  'cards',
+  'player_resolved',
+  'player_resolved INTEGER NOT NULL DEFAULT 0'
+);
 
 // Apply versioned schema migrations on top of the baseline. New structural
 // changes go here as numbered migrations, not as ad-hoc ALTERs above.

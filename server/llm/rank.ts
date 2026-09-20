@@ -16,6 +16,40 @@ export interface RankedRecall {
   reason: string;
 }
 
+export function parseRankedRecall(raw: string): RankedRecall[] {
+  const value: unknown = JSON.parse(raw);
+  if (!value || typeof value !== 'object') {
+    throw new Error('想起結果の形式が正しくありません。');
+  }
+  const results = (value as Record<string, unknown>).results;
+  if (!Array.isArray(results)) {
+    throw new Error('想起結果の形式が正しくありません。');
+  }
+  return results.map(item => {
+    if (!item || typeof item !== 'object') {
+      throw new Error('想起結果の形式が正しくありません。');
+    }
+    const result = item as Record<string, unknown>;
+    if (
+      typeof result.id !== 'string' ||
+      !result.id ||
+      typeof result.relevance !== 'number' ||
+      !Number.isFinite(result.relevance) ||
+      result.relevance < 0 ||
+      result.relevance > 1 ||
+      typeof result.reason !== 'string' ||
+      !result.reason.trim()
+    ) {
+      throw new Error('想起結果の形式が正しくありません。');
+    }
+    return {
+      id: result.id,
+      relevance: result.relevance,
+      reason: result.reason.trim(),
+    };
+  });
+}
+
 // Have the LLM select and reorder the embedding-gathered candidates by their
 // actual connection strength. `direction` (optional) steers the recall toward
 // a kind of music the user asked for (e.g. "ジャズっぽいもの").
@@ -45,6 +79,5 @@ export async function rankRecall(
     system: rankPrompt.system(limit),
     user,
   });
-  const parsed = JSON.parse(raw || '{}') as { results?: RankedRecall[] };
-  return parsed.results ?? [];
+  return parseRankedRecall(raw);
 }

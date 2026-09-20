@@ -1,58 +1,39 @@
 import { Hono } from 'hono';
 import {
-  createSession,
-  getSession,
+  getSessionByPublicId,
   listActiveSessions,
   editSessionWork,
   deleteSession,
 } from '../db/sessions.js';
-import { getCard } from '../db/cards.js';
 import { addMessage, listMessages } from '../db/messages.js';
 import { relatedToText } from '../cards/related.js';
-import {
-  continueSession,
-  openingMessage,
-  researchSession,
-} from '../llm/chat.js';
+import { continueSession, researchSession } from '../llm/chat.js';
 import { createCardFromSession } from '../cards/from-session.js';
 import { suggestFragment } from '../llm/suggest.js';
 import { cardToClient } from '../cards/to-client.js';
 import { sessionToClient } from '../sessions/to-client.js';
-import { parsePlayerUrl } from '../player/parse-url.js';
+import type { PastedMetadataExtras } from '../cards/resolve-pasted-metadata.js';
+import { startSession } from '../sessions/start.js';
+import { INVALID_JSON_MESSAGE, readJsonObject } from './json-body.js';
 import {
-  resolvePastedMetadata,
-  composePastedMetadata,
-  type PastedLookup,
-  type PastedMetadataExtras,
-} from '../cards/resolve-pasted-metadata.js';
-import { BLANK_METADATA_TEMPLATE } from '../cards/metadata-template.js';
-import type { AppEnv } from '../auth/require-user.js';
+  requireProjectMember,
+  type ProjectRouteEnv,
+} from './project-context.js';
 
-export const sessions = new Hono<AppEnv>();
+export const sessions = new Hono<ProjectRouteEnv>();
+
+sessions.use('*', requireProjectMember);
 
 // Open sessions for the workspace sidebar.
-sessions.get('/', c =>
-  c.json(listActiveSessions(c.get('userId')).map(sessionToClient))
-);
-
-// Decide the title and artist from the input and a pasted URL's lookup. If
-// either is empty, fill it from the lookup. Returns null unless both end up
-// present.
-function resolveWork(
-  title: unknown,
-  artist: unknown,
-  pastedLookup: PastedLookup | null
-): { title: string; artist: string } | null {
-  let workTitle = typeof title === 'string' ? title.trim() : '';
-  let workArtist = typeof artist === 'string' ? artist.trim() : '';
-  if (pastedLookup) {
-    workTitle = workTitle || pastedLookup.title;
-    workArtist = workArtist || pastedLookup.artist;
-  }
-  return workTitle && workArtist
-    ? { title: workTitle, artist: workArtist }
-    : null;
-}
+sessions.get('/', c => {
+  const userId = c.get('userId');
+  const project = c.get('project');
+  return c.json(
+    listActiveSessions(project.id, userId).map(session =>
+      sessionToClient(session, project.slug)
+    )
+  );
+});
 
 // Read the account's own edits to the start form's album/released/label
 // preview. Undefined (not an object at all) means no lookup ever succeeded
@@ -73,6 +54,13 @@ function parseMetadataExtras(input: unknown): PastedMetadataExtras | undefined {
   };
 }
 
+function hasInvalidOptionalString(
+  body: Record<string, unknown>,
+  key: string
+): boolean {
+  return body[key] !== undefined && typeof body[key] !== 'string';
+}
+
 // Start a session: title, artist, memo (optional), continueFromCardId
 // (optional). The opening message always involves a web search. With
 // continueFromCardId, carry over that card's source session messages first
@@ -80,83 +68,67 @@ function parseMetadataExtras(input: unknown): PastedMetadataExtras | undefined {
 // first user message) and answered.
 sessions.post('/', async c => {
   const userId = c.get('userId');
+  const project = c.get('project');
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
   const { title, artist, memo, continueFromCardId, playerUrl, metadataExtras } =
-    await c.req.json();
+    body;
 
-  // If a URL was pasted at start, parse it syntactically and attach it to the
-  // session. Invalid URLs are ignored and left to search at card creation.
-  const pasted = parsePlayerUrl(
-    typeof playerUrl === 'string' ? playerUrl : null
-  );
+  if (
+    ['title', 'artist', 'memo', 'continueFromCardId', 'playerUrl'].some(key =>
+      hasInvalidOptionalString(body, key)
+    ) ||
+    (metadataExtras !== undefined &&
+      (metadataExtras === null ||
+        typeof metadataExtras !== 'object' ||
+        Array.isArray(metadataExtras)))
+  ) {
+    return c.json({ error: 'セッションの入力形式が正しくありません。' }, 400);
+  }
+  if (
+    metadataExtras &&
+    ['album', 'released', 'label'].some(key =>
+      hasInvalidOptionalString(metadataExtras as Record<string, unknown>, key)
+    )
+  ) {
+    return c.json({ error: '参照情報の形式が正しくありません。' }, 400);
+  }
 
-  // A pasted link is looked up once here (regardless of whether title/artist
-  // are already filled in), since its response is also the fallback source
-  // for metadataExtras below if the account submits before the start form's
-  // own lookup resolves.
-  const pastedLookup = pasted ? await resolvePastedMetadata(pasted) : null;
-
-  const work = resolveWork(title, artist, pastedLookup);
-  if (!work) {
+  const result = await startSession(project.id, userId, {
+    title: typeof title === 'string' ? title : undefined,
+    artist: typeof artist === 'string' ? artist : undefined,
+    memo: typeof memo === 'string' ? memo : undefined,
+    continueFromCardId:
+      typeof continueFromCardId === 'string' ? continueFromCardId : undefined,
+    playerUrl: typeof playerUrl === 'string' ? playerUrl : undefined,
+    metadataExtras: parseMetadataExtras(metadataExtras),
+  });
+  if (result.kind === 'unsupported-player-url') {
+    return c.json({ error: '対応していない視聴 URL です。' }, 400);
+  }
+  if (result.kind === 'missing-work') {
     return c.json(
       { error: '対象とアーティストを入力するか、視聴 URL を貼ってください' },
       400
     );
   }
-
-  // Continued session: record the original card as base and carry over the
-  // past conversation.
-  const baseId =
-    typeof continueFromCardId === 'string' && continueFromCardId
-      ? continueFromCardId
-      : null;
-  const base = baseId ? getCard(baseId, userId) : null;
-  // Seed the reference metadata: on a continued session from the base card so
-  // its notes carry over, otherwise the blank template. Track/Album and
-  // Artist(s) are always derived from the work decided above (not copied
-  // from the lookup), so they can never go stale relative to an edited
-  // title/artist; album/released/label come from the account's own review
-  // in the start form (or, failing that, straight from the lookup).
-  const seedMetadata = base?.metadata ?? BLANK_METADATA_TEMPLATE;
-  const extras = parseMetadataExtras(metadataExtras) ?? pastedLookup?.extras;
-  const metadata = composePastedMetadata(seedMetadata, pasted, work, extras);
-  const session = createSession(
-    userId,
-    work.title,
-    work.artist,
-    metadata,
-    baseId,
-    pasted ? JSON.stringify(pasted) : null
-  );
-
-  if (base?.session_id) {
-    for (const m of listMessages(base.session_id)) {
-      addMessage(session.id, m.role, m.content);
-    }
+  if (result.kind === 'base-card-not-found') {
+    return c.json({ error: '継続元のカードが見つかりません。' }, 404);
   }
-
-  if (typeof memo === 'string' && memo.trim()) {
-    addMessage(session.id, 'user', memo.trim());
-  }
-
-  const chatWork = { title: session.title, artist: session.artist };
-  const history = listMessages(session.id);
-  const opening =
-    history.length > 0
-      ? await continueSession(chatWork, history, true)
-      : await openingMessage(chatWork, true);
-  addMessage(session.id, 'assistant', opening);
 
   return c.json({
-    session: sessionToClient(session),
-    messages: listMessages(session.id),
+    session: sessionToClient(result.session, project.slug),
+    messages: result.messages,
   });
 });
 
 sessions.get('/:id', c => {
-  const session = getSession(c.req.param('id'), c.get('userId'));
+  const userId = c.get('userId');
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   return c.json({
-    session: sessionToClient(session),
+    session: sessionToClient(session, project.slug),
     messages: listMessages(session.id),
   });
 });
@@ -166,9 +138,22 @@ sessions.get('/:id', c => {
 // required, so reject an empty value; metadata is freeform.
 sessions.patch('/:id', async c => {
   const userId = c.get('userId');
-  const session = getSession(c.req.param('id'), userId);
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
-  const { title, artist, metadata } = await c.req.json().catch(() => ({}));
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  if (
+    ['title', 'artist', 'metadata'].some(key =>
+      hasInvalidOptionalString(body, key)
+    )
+  ) {
+    return c.json(
+      { error: 'セッションの変更内容の形式が正しくありません。' },
+      400
+    );
+  }
+  const { title, artist, metadata } = body;
   const next = {
     title: typeof title === 'string' ? title.trim() : session.title,
     artist: typeof artist === 'string' ? artist.trim() : session.artist,
@@ -178,13 +163,15 @@ sessions.patch('/:id', async c => {
     return c.json({ error: '対象とアーティストは空にできません' }, 400);
   }
   const updated = editSessionWork(session.id, userId, next);
-  return c.json(sessionToClient(updated!));
+  if (!updated) throw new Error('更新対象のセッションが見つかりません。');
+  return c.json(sessionToClient(updated, project.slug));
 });
 
 // Discard an open session (and its messages) from the workspace.
 sessions.delete('/:id', c => {
   const userId = c.get('userId');
-  const session = getSession(c.req.param('id'), userId);
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   deleteSession(session.id, userId);
   return c.json({ ok: true });
@@ -194,17 +181,18 @@ sessions.delete('/:id', c => {
 // Embedding only (no LLM, no reason), meant to run after each Co-listener turn.
 sessions.post('/:id/related', async c => {
   const userId = c.get('userId');
-  const session = getSession(c.req.param('id'), userId);
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   const transcript = listMessages(session.id)
     .map(m => m.content)
     .join('\n');
   const related = await relatedToText(
     transcript,
-    userId,
+    { projectId: project.id, userId },
     session.base_card_id ?? undefined
   );
-  return c.json(related);
+  return c.json(related.map(card => cardToClient(card, project.slug, userId)));
 });
 
 // Ghost-text example for the fragment input, seeded from the most recent
@@ -212,7 +200,8 @@ sessions.post('/:id/related', async c => {
 // on every keystroke. null when there is no assistant message yet.
 sessions.get('/:id/suggest', async c => {
   const userId = c.get('userId');
-  const session = getSession(c.req.param('id'), userId);
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
   const last = [...listMessages(session.id)]
     .reverse()
@@ -228,9 +217,19 @@ sessions.get('/:id/suggest', async c => {
 // runs a web search and returns the findings. In 'research' the body is
 // optional (empty means investigate the recent context).
 sessions.post('/:id/messages', async c => {
-  const session = getSession(c.req.param('id'), c.get('userId'));
+  const userId = c.get('userId');
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
-  const { content, mode } = await c.req.json();
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  const { content, mode } = body;
+  if (content !== undefined && typeof content !== 'string') {
+    return c.json({ error: '入力の形式が正しくありません。' }, 400);
+  }
+  if (mode !== undefined && mode !== 'comment' && mode !== 'research') {
+    return c.json({ error: 'モードが正しくありません。' }, 400);
+  }
   const research = mode === 'research';
   if (!research && !content) {
     return c.json({ error: '入力が空です' }, 400);
@@ -251,12 +250,18 @@ sessions.post('/:id/messages', async c => {
 // (a user message) before compressing (no reply is generated).
 sessions.post('/:id/card', async c => {
   const userId = c.get('userId');
-  const session = getSession(c.req.param('id'), userId);
+  const project = c.get('project');
+  const session = getSessionByPublicId(project.id, c.req.param('id'), userId);
   if (!session) return c.json({ error: 'not found' }, 404);
-  const { finalComment } = await c.req.json().catch(() => ({}));
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  const { finalComment } = body;
+  if (finalComment !== undefined && typeof finalComment !== 'string') {
+    return c.json({ error: '最後のコメントの形式が正しくありません。' }, 400);
+  }
   if (typeof finalComment === 'string' && finalComment.trim()) {
     addMessage(session.id, 'user', finalComment.trim());
   }
   const card = await createCardFromSession(session.id, userId);
-  return c.json(cardToClient(card));
+  return c.json(cardToClient(card, project.slug, userId));
 });

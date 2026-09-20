@@ -39,12 +39,28 @@ tenant is fine locally). Every `/api/*` route requires a signed-in user, so the
 app will not come up until `OIDC_ISSUER`, `OIDC_AUDIENCE`,
 `VITE_LOGTO_ENDPOINT`, `VITE_LOGTO_APP_ID`, and `VITE_LOGTO_RESOURCE` point at a
 working tenant. LLM features additionally need each account to enter its own
-OpenAI API key from the Settings screen after signing in — there is
+OpenAI API key from the Account settings screen after signing in — there is
 deliberately no operator fallback, since usage is billed to whoever makes the
 call.
 
 `npm run dev` starts the backend (Hono, :8787) and the frontend (Vite, :5173)
 at the same time. Open <http://localhost:5173> in a browser.
+
+Each account starts with a project and can create more. Project URLs use
+the form `/p/:project`, with sessions at `/p/:project/s/:id`, cards at
+`/p/:project/c/:id`, the card list at `/p/:project/cards`, and recall at
+`/p/:project/recall`. The short card and session IDs are scoped to their
+project; UUIDs remain internal. Browser back/forward, reload, and opening links
+in a new tab preserve the view. Project owners can change the project ID later;
+doing so changes every URL below it, and old URLs stop resolving.
+
+Cards can be visible only to their creator or to everyone. New cards are public
+by default; a project owner can instead make new cards hidden by default.
+Cards that existed when visibility was introduced were initialized as hidden;
+later migrations do not rewrite individual cards. A public card is readable
+without signing in at its normal card URL, while its source session,
+conversation, reference metadata, and account details remain private. Sessions
+are always visible only to their creator.
 
 ## Environment variables (.env)
 
@@ -64,7 +80,7 @@ at the same time. Open <http://localhost:5173> in a browser.
 | `WEB_ROOT`              | `dist`                     | Built frontend directory the backend serves in production                     |
 
 There is no `OPENAI_API_KEY` here: each account enters its own from the
-Settings screen, encrypted at rest with `CREDENTIAL_SECRET`. Model choice
+Account settings screen, encrypted at rest with `CREDENTIAL_SECRET`. Model choice
 (provider, per-use models, web search context) lives in
 `server/llm/model-config.ts`, not in `.env`.
 
@@ -90,9 +106,9 @@ recall.
   `llm_usage` table), `cards/` recall and card generation, `player/` player
   resolution (Spotify / Apple Music / YouTube / Niconico), `routes/`
   endpoints.
-- `src/` — React frontend. `screens/` holds five screens (`CardsScreen`,
-  `RecallScreen`, `SessionScreen`, `SettingsScreen`, `StartSessionForm`),
-  `api/` is the client.
+- `src/` — React frontend. `screens/` holds six screens (`CardsScreen`,
+  `RecallScreen`, `SessionScreen`, `AccountSettingsScreen`,
+  `ProjectSettingsScreen`, `StartSessionForm`), `api/` is the client.
 
 LLM usage and derived cost are logged per call; `GET /api/usage` returns an
 aggregated summary (totals, by use, by model). Cost is derived from a rate table

@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import {
-  getCardTranscript,
-  type Card,
-  type ChatMessage,
-} from '../api/client.js';
+import { getCardTranscript, type Card } from '../api/cards.js';
+import type { ChatMessage } from '../api/sessions.js';
 import { RichText } from './RichText.js';
 import { CardTitleText } from './CardTitleText.js';
 import { MetadataEditor } from './MetadataEditor.js';
@@ -19,6 +16,7 @@ export function CardView({
   metaAction,
   onEditField,
   onSaveMetadata,
+  publicView = false,
   children,
 }: {
   card: Card;
@@ -26,6 +24,7 @@ export function CardView({
   metaAction?: React.ReactNode;
   onEditField?: (field: 'title' | 'artist', value: string) => Promise<void>;
   onSaveMetadata?: (next: string) => Promise<void>;
+  publicView?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -44,20 +43,22 @@ export function CardView({
       </dl>
       <div className="card-meta">
         <span>登録 {formatDateTime(card.created_at)}</span>
-        <span>想起から {card.recall_count} 回参照</span>
+        {!publicView && <span>想起から {card.recall_count} 回参照</span>}
         {metaAction && <span className="meta-action">{metaAction}</span>}
       </div>
       {onSaveMetadata && (
         <MetadataEditor value={card.metadata} onSave={onSaveMetadata} />
       )}
-      {card.session_id && <Transcript key={card.id} cardId={card.id} />}
+      {!publicView && card.hasTranscript && (
+        <Transcript key={card.id} card={card} />
+      )}
       {children}
     </article>
   );
 }
 
 // The source session's conversation. View-only, lazily fetched when opened.
-function Transcript({ cardId }: { cardId: string }) {
+function Transcript({ card }: { card: Card }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [error, setError] = useState('');
@@ -67,7 +68,7 @@ function Transcript({ cardId }: { cardId: string }) {
     setOpen(next);
     if (next && messages === null) {
       try {
-        setMessages(await getCardTranscript(cardId));
+        setMessages(await getCardTranscript(card.projectSlug, card.id));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }

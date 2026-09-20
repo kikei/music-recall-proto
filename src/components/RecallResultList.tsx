@@ -1,5 +1,6 @@
-import type { RecallResult } from '../api/client.js';
+import type { RecallResult } from '../api/recall.js';
 import { PlayerEmbed } from './PlayerEmbed.js';
+import { NavLink } from './NavLink.js';
 
 // List of recall results. Click to open that card.
 // Show a minimal set (why recalled + target) and the full player, matching
@@ -14,17 +15,19 @@ export function RecallResultList({
   return (
     <div className="recall-results">
       {results.map(r => (
-        <article
-          key={r.id}
-          className="card recalled clickable"
-          onClick={() => onOpen(r.id)}
-        >
-          <p className="reason">{r.reason}</p>
-          <h3 className="card-target">
-            {r.title} <span className="card-artist">/ {r.artist}</span>
-          </h3>
+        <article key={r.id} className="card recalled">
+          <NavLink
+            className="recall-result-link"
+            to={{ kind: 'card', projectSlug: r.projectSlug, id: r.id }}
+            onNavigate={() => onOpen(r.id)}
+          >
+            <p className="reason">{r.reason}</p>
+            <h3 className="card-target">
+              {r.title} <span className="card-artist">/ {r.artist}</span>
+            </h3>
+          </NavLink>
           {r.player && (
-            <div onClick={e => e.stopPropagation()}>
+            <div>
               <PlayerEmbed player={r.player} />
             </div>
           )}

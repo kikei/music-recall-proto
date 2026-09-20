@@ -1,5 +1,6 @@
 import { useLogto } from '@logto/react';
 import { signOutRedirectUri } from './logto-config.js';
+import { NavLink } from '../components/NavLink.js';
 
 // The foot of the sidebar: who is signed in on the left, the two things you can
 // do about it on the right. Icons rather than words for the actions, since they
@@ -13,31 +14,31 @@ import { signOutRedirectUri } from './logto-config.js';
 export function AccountPanel({
   displayName,
   active,
-  onSettings,
+  projectSlug,
 }: {
   displayName: string | null;
   active: boolean;
-  onSettings: () => void;
+  projectSlug: string;
 }) {
   const { signOut } = useLogto();
   return (
     <div className="side-account">
-      <button
+      <NavLink
         className="side-account-name"
         title={displayName ?? ''}
-        onClick={onSettings}
+        to={{ kind: 'account-settings', projectSlug }}
       >
         {displayName ?? ''}
-      </button>
+      </NavLink>
       <div className="side-account-actions">
-        <button
+        <NavLink
           className={active ? 'side-account-icon active' : 'side-account-icon'}
-          onClick={onSettings}
-          title="設定"
-          aria-label="設定"
+          to={{ kind: 'account-settings', projectSlug }}
+          title="アカウント設定"
+          aria-label="アカウント設定"
         >
           <GearIcon />
-        </button>
+        </NavLink>
         <button
           className="side-account-icon"
           onClick={() => signOut(signOutRedirectUri)}

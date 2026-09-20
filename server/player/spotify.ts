@@ -24,11 +24,16 @@ async function getToken(): Promise<string | null> {
     },
     body: 'grant_type=client_credentials',
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new Error(`Spotify の認証に失敗しました (${res.status})。`);
+  }
   const json = (await res.json()) as {
-    access_token: string;
-    expires_in: number;
+    access_token?: string;
+    expires_in?: number;
   };
+  if (!json.access_token || typeof json.expires_in !== 'number') {
+    throw new Error('Spotify の認証応答の形式が正しくありません。');
+  }
   cachedTokens.set(id, {
     token: json.access_token,
     expiresAt: Date.now() + json.expires_in * 1000,
@@ -61,7 +66,10 @@ export async function spotifyLookup(
   const res = await fetch(`https://api.spotify.com/v1/${kind}s/${id}`, {
     headers: { authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return null;
+  if (res.status === 400 || res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Spotify の情報取得に失敗しました (${res.status})。`);
+  }
   const json = (await res.json()) as {
     name?: string;
     artists?: { name: string }[];
@@ -105,7 +113,9 @@ export async function spotifySearch(
     `https://api.spotify.com/v1/search?q=${q}&type=album,track&limit=10`,
     { headers: { authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) return [];
+  if (!res.ok) {
+    throw new Error(`Spotify の検索に失敗しました (${res.status})。`);
+  }
   const json = (await res.json()) as {
     albums?: { items?: SpotifyItem[] };
     tracks?: { items?: SpotifyItem[] };

@@ -1,6 +1,8 @@
-import { getCard, editCardFields, type Card } from '../db/cards.js';
+import { getEditableCardById, editCardFields, type Card } from '../db/cards.js';
+import { checkVisibility } from './visibility.js';
 import { embed, cardEmbeddingText } from '../llm/embed.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
+import { RequestValidationError } from '../request-validation.js';
 
 export interface CardPatch {
   title?: string;
@@ -10,6 +12,7 @@ export interface CardPatch {
   background?: string;
   metadata?: string; // freeform reference notes; not part of the embedding
   playerUrl?: string; // empty string removes the player
+  visibility?: unknown;
 }
 
 // Pick a patched identity field, keeping the current value when it is absent.
@@ -17,7 +20,9 @@ export interface CardPatch {
 function patched(next: string | undefined, current: string, label: string) {
   if (next === undefined) return current;
   const trimmed = next.trim();
-  if (!trimmed) throw new Error(`${label}を空にはできません。`);
+  if (!trimmed) {
+    throw new RequestValidationError(`${label}を空にはできません。`);
+  }
   return trimmed;
 }
 
@@ -29,7 +34,7 @@ export async function editCard(
   userId: string,
   patch: CardPatch
 ): Promise<Card | undefined> {
-  const card = getCard(id, userId);
+  const card = getEditableCardById(id, userId);
   if (!card) return undefined;
 
   const title = patched(patch.title, card.title, 'タイトル');
@@ -62,13 +67,18 @@ export async function editCard(
     } else {
       const parsed = parsePlayerUrl(trimmed);
       if (!parsed) {
-        throw new Error(
+        throw new RequestValidationError(
           '対応していない URL です (Spotify / YouTube / ニコニコ動画)'
         );
       }
       player = JSON.stringify(parsed);
     }
   }
+
+  const visibility =
+    patch.visibility === undefined
+      ? card.visibility
+      : checkVisibility(patch.visibility);
 
   return editCardFields(id, userId, {
     title,
@@ -79,5 +89,6 @@ export async function editCard(
     metadata,
     embedding,
     player,
+    visibility,
   });
 }

@@ -1,5 +1,5 @@
 import { InlineEditText } from './InlineEditText.js';
-import type { Card } from '../api/client.js';
+import type { Card } from '../api/cards.js';
 
 // The work a card is about: title / artist. With `onEditField` the
 // title and artist are click-to-edit in place; without it they are plain text.

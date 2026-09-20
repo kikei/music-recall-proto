@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLogto } from '@logto/react';
+import { deleteAccount, setDisplayName } from '../api/account.js';
 import {
   listCredentials,
-  saveCredential,
   removeCredential,
-  setDisplayName,
+  saveCredential,
   type CredentialKind,
   type CredentialStatus,
-} from '../api/client.js';
+} from '../api/credentials.js';
+import type { Project } from '../api/projects.js';
+import { signOutRedirectUri } from '../auth/logto-config.js';
+import { NavLink } from '../components/NavLink.js';
 
 // Keys are grouped by the service they belong to rather than listed one per
 // row: Spotify needs two values that are useless apart, so they are entered and
@@ -54,15 +58,21 @@ const GROUPS: KeyGroup[] = [
   },
 ];
 
-export function SettingsScreen({
+export function AccountSettingsScreen({
   displayName,
   onDisplayNameChanged,
+  project,
+  onProjectSettings,
 }: {
   displayName: string | null;
   onDisplayNameChanged: (next: string | null) => void;
+  project: Project;
+  onProjectSettings: () => void;
 }) {
   const [status, setStatus] = useState<CredentialStatus[] | null>(null);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const { signOut } = useLogto();
 
   useEffect(() => {
     listCredentials()
@@ -70,7 +80,30 @@ export function SettingsScreen({
       .catch(e => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
-  if (!status) return <p className="hint">読み込んでいます…</p>;
+  if (!status) {
+    return (
+      <p className={error ? 'error' : 'hint'}>{error || '読み込んでいます…'}</p>
+    );
+  }
+
+  async function removeAccount() {
+    if (
+      !window.confirm(
+        'アカウントを削除します。所有するプロジェクトと、ほかのプロジェクト内で自分が作成したカード・セッション、API キーが削除され、元に戻せません。削除しますか?'
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError('');
+    try {
+      await deleteAccount();
+      await signOut(signOutRedirectUri);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="settings">
@@ -91,6 +124,38 @@ export function SettingsScreen({
           onError={setError}
         />
       ))}
+      <h2>プロジェクト設定</h2>
+      <section className="key-group first account-project-settings">
+        <div className="account-project-settings-copy">
+          <p className="hint">表示中: {project.name}</p>
+        </div>
+        <NavLink
+          className="account-project-settings-link"
+          to={{ kind: 'project-settings', projectSlug: project.slug }}
+          onNavigate={onProjectSettings}
+        >
+          設定を開く
+          <svg viewBox="0 0 12 12" aria-hidden focusable="false">
+            <path d="m4 2 4 4-4 4" />
+          </svg>
+        </NavLink>
+      </section>
+      <h2>アカウントの削除</h2>
+      <section className="key-group first account-delete">
+        <div className="account-delete-copy">
+          <p className="hint">
+            所有するすべてのプロジェクトと、参加中のプロジェクトでこのアカウントが作成したすべてのカード、セッション、保存した
+            API キーを完全に削除します。削除後は復元できません。プロジェクトはプロジェクト設定から削除できます。
+          </p>
+        </div>
+        <button
+          className="key-button danger account-delete-button"
+          disabled={deleting}
+          onClick={removeAccount}
+        >
+          アカウントを削除
+        </button>
+      </section>
     </div>
   );
 }

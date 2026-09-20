@@ -38,12 +38,14 @@ export async function appleLookup(
   storefront: string,
   id: string
 ): Promise<AppleMeta | null> {
-  const country = storefront || 'us';
   const res = await fetch(
     `https://itunes.apple.com/lookup?id=${encodeURIComponent(id)}` +
-      `&country=${encodeURIComponent(country)}`
+      `&country=${encodeURIComponent(storefront)}`
   );
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Apple Music の情報取得に失敗しました (${res.status})。`);
+  }
   const data = (await res.json()) as { results?: LookupResult[] };
   const r = data.results?.[0];
   if (!r) return null;

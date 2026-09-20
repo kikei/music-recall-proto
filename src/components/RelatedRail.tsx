@@ -1,4 +1,5 @@
-import type { Card, Player } from '../api/client.js';
+import type { Card } from '../api/cards.js';
+import type { Player } from '../api/players.js';
 import { PlayerEmbed } from './PlayerEmbed.js';
 
 // Ambient recall rail beside the conversation. The session's own player sits at

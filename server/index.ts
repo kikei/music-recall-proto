@@ -8,26 +8,31 @@ import { player } from './routes/player.js';
 import { usage } from './routes/usage.js';
 import { credentials } from './routes/credentials.js';
 import { account } from './routes/account.js';
+import { projects } from './routes/projects.js';
+import { publicCards } from './routes/public-cards.js';
 import { requireUser, type AppEnv } from './auth/require-user.js';
 import { webApp, webAppAvailable } from './routes/web-app.js';
+import { RequestValidationError } from './request-validation.js';
 
 const app = new Hono<AppEnv>();
 
 // Answers before authentication and without touching the database, so a health
 // check says "the process is up and serving" and nothing more.
 app.get('/healthz', c => c.text('ok'));
+app.route('/public', publicCards);
 
 // Everything under /api belongs to a signed-in account. Applied here rather
 // than per route so a new route cannot forget it.
 app.use('/api/*', requireUser);
 
-app.route('/api/sessions', sessions);
-app.route('/api/cards', cards);
-app.route('/api/recall', recallRoute);
+app.route('/api/projects/:projectSlug/sessions', sessions);
+app.route('/api/projects/:projectSlug/cards', cards);
+app.route('/api/projects/:projectSlug/recall', recallRoute);
 app.route('/api/player', player);
 app.route('/api/usage', usage);
 app.route('/api/credentials', credentials);
 app.route('/api/account', account);
+app.route('/api/projects', projects);
 
 // After the API, so /api/* is never mistaken for a page. Without a build (a
 // bare API deployment, or the compiled server run from a checkout) the root
@@ -43,6 +48,9 @@ if (webAppAvailable) {
 }
 
 app.onError((err, c) => {
+  if (err instanceof RequestValidationError) {
+    return c.json({ error: err.message }, 400);
+  }
   console.error('[music-recall]', err);
   return c.json({ error: err.message }, 500);
 });

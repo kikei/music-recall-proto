@@ -3,18 +3,33 @@ import { useLogto, useHandleSignInCallback } from '@logto/react';
 import { setAccessTokenGetter } from '../api/access-token.js';
 import { onUnauthorized } from '../api/session-expiry.js';
 import { apiResource, signInRedirectUri } from './logto-config.js';
+import { rememberCurrentPage, returnToPage } from './return-to.js';
 
 // Nothing in the app renders until there is a signed-in account and the API
 // client can obtain a token for it. Keeping the whole app behind this means no
 // screen has to handle "not signed in" on its own.
-export function AuthGate({ children }: { children: React.ReactNode }) {
+export function AuthGate({
+  children,
+  publicFallback,
+}: {
+  children: React.ReactNode;
+  publicFallback?: React.ReactNode;
+}) {
   if (window.location.pathname === '/callback') {
     return <SignInCallback />;
   }
-  return <RequireSignIn>{children}</RequireSignIn>;
+  return (
+    <RequireSignIn publicFallback={publicFallback}>{children}</RequireSignIn>
+  );
 }
 
-function RequireSignIn({ children }: { children: React.ReactNode }) {
+function RequireSignIn({
+  children,
+  publicFallback,
+}: {
+  children: React.ReactNode;
+  publicFallback?: React.ReactNode;
+}) {
   const { isAuthenticated, isLoading, signIn, getAccessToken } = useLogto();
   // Children only mount once the token getter is registered, so their first
   // requests already carry an Authorization header.
@@ -22,6 +37,11 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
   // The server rejected the token, or none could be obtained. Whichever it was,
   // the way out is the same and no individual screen can offer it.
   const [expired, setExpired] = useState(false);
+
+  function beginSignIn() {
+    rememberCurrentPage();
+    signIn(signInRedirectUri);
+  }
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -45,7 +65,7 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
         <p className="hint">
           サインインの有効期限が切れました。もう一度サインインしてください。
         </p>
-        <button className="primary" onClick={() => signIn(signInRedirectUri)}>
+        <button className="primary" onClick={beginSignIn}>
           サインイン
         </button>
       </div>
@@ -62,13 +82,23 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
   if (isLoading) return <PageStatus>読み込んでいます…</PageStatus>;
 
   if (!isAuthenticated) {
+    if (publicFallback) {
+      return (
+        <>
+          {publicFallback}
+          <div className="public-sign-in">
+            <button onClick={beginSignIn}>サインイン</button>
+          </div>
+        </>
+      );
+    }
     return (
       <div className="sign-in">
         <h1>音楽想起エンジン</h1>
         <p className="hint">
           聴いた記録はアカウントごとに保存されます。サインインして始めてください。
         </p>
-        <button className="primary" onClick={() => signIn(signInRedirectUri)}>
+        <button className="primary" onClick={beginSignIn}>
           サインイン
         </button>
       </div>
@@ -78,18 +108,20 @@ function RequireSignIn({ children }: { children: React.ReactNode }) {
   return <PageStatus>読み込んでいます…</PageStatus>;
 }
 
-// Lands here after the identity provider redirects back. Reload at the root so
-// the app starts from a clean URL with the session already established.
+// Lands here after the identity provider redirects back. Return to the page
+// requested before sign-in, including a shared card or session deep link.
 function SignInCallback() {
   const { error } = useHandleSignInCallback(() => {
-    window.location.replace('/');
+    window.location.replace(returnToPage());
   });
 
   if (error) {
     return (
       <div className="sign-in">
         <p className="error">サインインできませんでした: {error.message}</p>
-        <button onClick={() => window.location.replace('/')}>やり直す</button>
+        <button onClick={() => window.location.replace(returnToPage())}>
+          やり直す
+        </button>
       </div>
     );
   }

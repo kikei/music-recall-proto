@@ -1,71 +1,143 @@
 import { Hono } from 'hono';
 import {
   listCardsForDisplay,
-  getCard,
+  getCardByPublicId,
+  getEditableCardByPublicId,
   bumpRecallCount,
   deleteCard,
 } from '../db/cards.js';
 import { listMessages } from '../db/messages.js';
 import { recallFromCard } from '../cards/recall.js';
+import { recallResultToClient } from '../cards/recall-to-client.js';
 import { editCard } from '../cards/edit.js';
-import { cardToClient as toClient } from '../cards/to-client.js';
-import type { AppEnv } from '../auth/require-user.js';
+import { cardToClient } from '../cards/to-client.js';
+import type { CardPatch } from '../cards/edit.js';
+import { INVALID_JSON_MESSAGE, readJsonObject } from './json-body.js';
+import { isCardCreator } from '../db/card-access.js';
+import {
+  requireProjectMember,
+  type ProjectRouteEnv,
+} from './project-context.js';
 
-export const cards = new Hono<AppEnv>();
+export const cards = new Hono<ProjectRouteEnv>();
+
+cards.use('*', requireProjectMember);
 
 cards.get('/', c => {
-  return c.json(listCardsForDisplay(c.get('userId')).map(toClient));
+  const project = c.get('project');
+  return c.json(
+    listCardsForDisplay(project.id, c.get('userId')).map(card =>
+      cardToClient(card, project.slug, c.get('userId'))
+    )
+  );
 });
 
 cards.get('/:id', c => {
-  const card = getCard(c.req.param('id'), c.get('userId'));
-  if (!card) return c.json({ error: 'not found' }, 404);
-  return c.json(toClient(card));
+  const project = c.get('project');
+  const card = getCardByPublicId(
+    project.id,
+    c.req.param('id'),
+    c.get('userId')
+  );
+  return card
+    ? c.json(cardToClient(card, project.slug, c.get('userId')))
+    : c.json({ error: 'not found' }, 404);
 });
 
-// Edit from the detail view (hook, recall phrase, background, player URL).
 cards.patch('/:id', async c => {
-  const body = await c.req.json().catch(() => ({}));
-  try {
-    const card = await editCard(c.req.param('id'), c.get('userId'), body);
-    if (!card) return c.json({ error: 'not found' }, 404);
-    return c.json(toClient(card));
-  } catch (e) {
-    return c.json({ error: e instanceof Error ? e.message : String(e) }, 400);
+  const userId = c.get('userId');
+  const project = c.get('project');
+  const target = getEditableCardByPublicId(
+    project.id,
+    c.req.param('id'),
+    userId
+  );
+  if (!target) return c.json({ error: 'not found' }, 404);
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  const stringFields = [
+    'title',
+    'artist',
+    'hook',
+    'recall_phrase',
+    'background',
+    'metadata',
+    'playerUrl',
+  ] as const;
+  if (
+    stringFields.some(
+      field => body[field] !== undefined && typeof body[field] !== 'string'
+    )
+  ) {
+    return c.json({ error: 'カードの変更内容の形式が正しくありません。' }, 400);
   }
+  const patch: CardPatch = {
+    title: typeof body.title === 'string' ? body.title : undefined,
+    artist: typeof body.artist === 'string' ? body.artist : undefined,
+    hook: typeof body.hook === 'string' ? body.hook : undefined,
+    recall_phrase:
+      typeof body.recall_phrase === 'string' ? body.recall_phrase : undefined,
+    background:
+      typeof body.background === 'string' ? body.background : undefined,
+    metadata: typeof body.metadata === 'string' ? body.metadata : undefined,
+    playerUrl: typeof body.playerUrl === 'string' ? body.playerUrl : undefined,
+    visibility: body.visibility,
+  };
+  const card = await editCard(target.id, userId, patch);
+  return card
+    ? c.json(cardToClient(card, project.slug, userId))
+    : c.json({ error: 'not found' }, 404);
 });
 
-// Delete a card (its source session and messages are removed too).
 cards.delete('/:id', c => {
-  const ok = deleteCard(c.req.param('id'), c.get('userId'));
-  if (!ok) return c.json({ error: 'not found' }, 404);
+  const userId = c.get('userId');
+  const project = c.get('project');
+  const card = getEditableCardByPublicId(project.id, c.req.param('id'), userId);
+  if (!card || !deleteCard(card.id, userId)) {
+    return c.json({ error: 'not found' }, 404);
+  }
   return c.json({ ok: true });
 });
 
-// Recall starting from this card. An optional `direction` steers the recall.
 cards.post('/:id/recall', async c => {
   const userId = c.get('userId');
-  const card = getCard(c.req.param('id'), userId);
+  const project = c.get('project');
+  const card = getCardByPublicId(project.id, c.req.param('id'), userId);
   if (!card) return c.json({ error: 'not found' }, 404);
-  const { direction } = await c.req.json().catch(() => ({}));
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  const { direction } = body;
+  if (direction !== undefined && typeof direction !== 'string') {
+    return c.json({ error: '想起の方向の形式が正しくありません。' }, 400);
+  }
   const steer = typeof direction === 'string' ? direction.trim() : '';
-  return c.json(await recallFromCard(card.id, userId, steer || undefined));
+  const results = await recallFromCard(
+    card.id,
+    { projectId: project.id, userId },
+    steer || undefined
+  );
+  return c.json(
+    results.map(result => recallResultToClient(result, project.slug))
+  );
 });
 
-// Increment the reference count when the detail is opened from a recall result.
 cards.post('/:id/recall-hit', c => {
   const userId = c.get('userId');
-  const card = getCard(c.req.param('id'), userId);
+  const project = c.get('project');
+  const card = getCardByPublicId(project.id, c.req.param('id'), userId);
   if (!card) return c.json({ error: 'not found' }, 404);
   bumpRecallCount(card.id, userId);
   return c.json({ recall_count: card.recall_count + 1 });
 });
 
-// Return the source session's messages for viewing only.
-// (Not used for recall search or embeddings.)
 cards.get('/:id/transcript', c => {
-  const card = getCard(c.req.param('id'), c.get('userId'));
+  const userId = c.get('userId');
+  const project = c.get('project');
+  const card = getCardByPublicId(project.id, c.req.param('id'), userId);
   if (!card) return c.json({ error: 'not found' }, 404);
-  const messages = card.session_id ? listMessages(card.session_id) : [];
-  return c.json(messages);
+  // A source transcript is always private to the card's creator.
+  if (!isCardCreator(card, userId)) {
+    return c.json({ error: 'not found' }, 404);
+  }
+  return c.json(card.session_id ? listMessages(card.session_id) : []);
 });

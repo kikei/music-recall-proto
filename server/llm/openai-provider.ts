@@ -38,6 +38,9 @@ export const openaiProvider: LlmProvider = {
         o => o.type === 'web_search_call'
       ).length,
     };
+    if (!response.output_text.trim()) {
+      throw new Error('LLM から応答本文が返されませんでした。');
+    }
     return { text: response.output_text, usage };
   },
 
@@ -58,7 +61,11 @@ export const openaiProvider: LlmProvider = {
       cachedInputTokens: u?.prompt_tokens_details?.cached_tokens ?? 0,
       searchCalls: 0,
     };
-    return { text: completion.choices[0]?.message.content ?? '', usage };
+    const text = completion.choices[0]?.message.content;
+    if (!text?.trim()) {
+      throw new Error('LLM から JSON 応答が返されませんでした。');
+    }
+    return { text, usage };
   },
 
   async embed(req: EmbedRequest) {
@@ -73,6 +80,8 @@ export const openaiProvider: LlmProvider = {
       cachedInputTokens: 0,
       searchCalls: 0,
     };
-    return { vector: response.data[0].embedding, usage };
+    const vector = response.data[0]?.embedding;
+    if (!vector) throw new Error('LLM から埋め込みが返されませんでした。');
+    return { vector, usage };
   },
 };

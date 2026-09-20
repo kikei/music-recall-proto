@@ -1,32 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  getCard,
-  recallHit,
-  createSession,
-  deleteCard,
-  editCard,
-  type Card,
-  type Session,
-} from '../api/client.js';
+import { deleteCard, editCard, getCard, type Card } from '../api/cards.js';
+import { recallHit } from '../api/recall.js';
+import { createSession, type Session } from '../api/sessions.js';
 import { CardView } from './CardView.js';
 import { CardEditForm } from './CardEditForm.js';
 import { PlayerEmbed } from './PlayerEmbed.js';
+import { VisibilityControl } from './VisibilityControl.js';
 
 // Standalone card page. Increments the reference count when opened from a recall
 // result. Each text field and the player URL can be edited; "recall" goes to the
 // recall view. A new/continued session can be started from the impression you
 // enter.
 export function CardPage({
+  projectSlug,
   cardId,
   fromRecall,
-  onClose,
+  onDeleted,
   onStarted,
   onRecallFromCard,
   onChanged,
 }: {
+  projectSlug: string;
   cardId: string;
   fromRecall: boolean;
-  onClose: () => void;
+  onDeleted: () => void;
   onStarted: (session: Session) => void;
   onRecallFromCard: (card: Card, direction: string) => void;
   // Card content changed, so lists showing it (the sidebar) should refresh.
@@ -37,25 +34,37 @@ export function CardPage({
   const [direction, setDirection] = useState('');
   const [impression, setImpression] = useState('');
   const [busy, setBusy] = useState(false);
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
   const [error, setError] = useState('');
   const hitDone = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       if (fromRecall && !hitDone.current) {
         hitDone.current = true;
-        try {
-          await recallHit(cardId);
-        } catch {
+        void recallHit(projectSlug, cardId).catch(() => {
           // Failing to bump the reference count is non-fatal, so ignore it
-        }
+        });
       }
       try {
-        setCard(await getCard(cardId));
+        const next = await getCard(projectSlug, cardId);
+        if (!cancelled) setCard(next);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message === 'not found'
+              ? 'カードが見つかりません。'
+              : e instanceof Error
+                ? e.message
+                : String(e)
+          );
+        }
       }
     })();
+    return () => {
+      cancelled = true;
+    };
     // Once per cardId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId]);
@@ -66,7 +75,7 @@ export function CardPage({
     if (!card) return;
     setError('');
     try {
-      setCard(await editCard(card.id, { [field]: value }));
+      setCard(await editCard(projectSlug, card.id, { [field]: value }));
       onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -80,7 +89,7 @@ export function CardPage({
     if (!card) return;
     setError('');
     try {
-      setCard(await editCard(card.id, { metadata: next }));
+      setCard(await editCard(projectSlug, card.id, { metadata: next }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       throw e; // keep the metadata editor open for a retry
@@ -93,8 +102,8 @@ export function CardPage({
     setBusy(true);
     setError('');
     try {
-      await deleteCard(card.id);
-      onClose();
+      await deleteCard(projectSlug, card.id);
+      onDeleted();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -107,6 +116,7 @@ export function CardPage({
     setError('');
     try {
       const res = await createSession(
+        projectSlug,
         card.title,
         card.artist,
         impression.trim(),
@@ -117,6 +127,20 @@ export function CardPage({
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function setVisibility(visibility: Card['visibility']) {
+    if (!card || visibility === card.visibility) return;
+    setVisibilityBusy(true);
+    setError('');
+    try {
+      setCard(await editCard(projectSlug, card.id, { visibility }));
+      onChanged?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVisibilityBusy(false);
     }
   }
 
@@ -139,14 +163,25 @@ export function CardPage({
         <>
           <CardView
             card={card}
-            onEditField={editField}
-            onSaveMetadata={saveMetadata}
+            onEditField={card.canEdit ? editField : undefined}
+            onSaveMetadata={card.canEdit ? saveMetadata : undefined}
             titleAction={
               <>
-                <button onClick={() => setEditing(true)}>編集</button>
-                <button className="danger" disabled={busy} onClick={remove}>
-                  削除
-                </button>
+                {card.canChangeVisibility && (
+                  <VisibilityControl
+                    value={card.visibility}
+                    disabled={visibilityBusy}
+                    onChange={setVisibility}
+                  />
+                )}
+                {card.canEdit && (
+                  <button onClick={() => setEditing(true)}>編集</button>
+                )}
+                {card.canDelete && (
+                  <button className="danger" disabled={busy} onClick={remove}>
+                    削除
+                  </button>
+                )}
               </>
             }
             metaAction={

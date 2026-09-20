@@ -14,7 +14,7 @@ export async function expandCue(query: string): Promise<string> {
       system: expandPrompt.system,
       user: query,
     });
-    const parsed = JSON.parse(raw || '{}') as { impression?: string };
+    const parsed = JSON.parse(raw) as { impression?: string };
     return parsed.impression?.trim() ?? '';
   } catch {
     // An expansion failure should not break recall; fall back to the raw cue.

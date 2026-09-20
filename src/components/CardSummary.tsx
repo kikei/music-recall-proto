@@ -1,5 +1,6 @@
-import type { Card } from '../api/client.js';
+import type { Card } from '../api/cards.js';
 import { formatDate } from '../format/datetime.js';
+import { NavLink } from './NavLink.js';
 
 // Clickable summary for the card list. Click to open the detail.
 export function CardSummary({
@@ -10,7 +11,11 @@ export function CardSummary({
   onOpen: () => void;
 }) {
   return (
-    <button className="card-summary" onClick={onOpen}>
+    <NavLink
+      className="card-summary"
+      to={{ kind: 'card', projectSlug: card.projectSlug, id: card.id }}
+      onNavigate={onOpen}
+    >
       <span className="card-target">
         {card.title} <span className="card-artist">/ {card.artist}</span>
         <span className="card-date">（{formatDate(card.created_at)}）</span>
@@ -21,6 +26,6 @@ export function CardSummary({
       <span className="card-meta">
         <span>想起から {card.recall_count} 回参照</span>
       </span>
-    </button>
+    </NavLink>
   );
 }

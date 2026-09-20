@@ -6,6 +6,7 @@ import {
   isCredentialKind,
 } from '../db/credentials.js';
 import type { AppEnv } from '../auth/require-user.js';
+import { INVALID_JSON_MESSAGE, readJsonObject } from './json-body.js';
 
 export const credentials = new Hono<AppEnv>();
 
@@ -19,7 +20,9 @@ credentials.put('/:kind', async c => {
   if (!isCredentialKind(kind)) {
     return c.json({ error: '未知のキーの種類です' }, 400);
   }
-  const { secret } = await c.req.json().catch(() => ({}));
+  const body = await readJsonObject(c.req);
+  if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
+  const { secret } = body;
   if (typeof secret !== 'string' || !secret.trim()) {
     return c.json({ error: 'キーを入力してください' }, 400);
   }

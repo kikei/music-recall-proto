@@ -2,6 +2,8 @@
 // before any other module reads environment variables.
 try {
   process.loadEnvFile('.env');
-} catch {
-  // The server can still start without .env (a missing-key warning follows).
+} catch (error) {
+  // A checkout need not have a local .env. Other failures, such as a file
+  // that cannot be read or parsed, are configuration errors and must surface.
+  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
 }

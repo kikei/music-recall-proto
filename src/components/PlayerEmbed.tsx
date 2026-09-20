@@ -1,4 +1,4 @@
-import type { Player } from '../api/client.js';
+import type { Player } from '../api/players.js';
 
 // Listening player embed. Spotify if available, otherwise YouTube/Niconico.
 // `compact` is a smaller variant for recall results etc. (omits the link).

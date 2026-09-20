@@ -10,6 +10,8 @@ import {
   missingAuthEnv,
 } from './auth/logto-config.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { PublicCardPage } from './components/PublicCardPage.js';
+import { routeFromUrl } from './routing.js';
 import './styles.css';
 
 // The SDK only requests discovery once it mounts and runs its effects; the
@@ -22,12 +24,21 @@ if (isAuthConfigured) {
   document.head.appendChild(link);
 }
 
+const initialRoute = routeFromUrl(window.location);
+const publicFallback =
+  initialRoute.kind === 'card' ? (
+    <PublicCardPage
+      projectSlug={initialRoute.projectSlug}
+      cardId={initialRoute.id}
+    />
+  ) : undefined;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       {isAuthConfigured ? (
         <LogtoProvider config={logtoConfig}>
-          <AuthGate>
+          <AuthGate publicFallback={publicFallback}>
             <App />
           </AuthGate>
         </LogtoProvider>

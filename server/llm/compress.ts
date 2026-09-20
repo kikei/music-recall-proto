@@ -16,6 +16,34 @@ export interface CompressedCard {
   background: string;
 }
 
+export function parseCompressedCard(raw: string): CompressedCard {
+  const value: unknown = JSON.parse(raw);
+  if (!value || typeof value !== 'object') {
+    throw new Error('カード生成結果の形式が正しくありません。');
+  }
+  const card = value as Record<string, unknown>;
+  const fields = ['title', 'artist', 'hook', 'recall_phrase', 'background'];
+  if (fields.some(field => typeof card[field] !== 'string')) {
+    throw new Error('カード生成結果の形式が正しくありません。');
+  }
+  const title = (card.title as string).trim();
+  const artist = (card.artist as string).trim();
+  if (!title || !artist) {
+    throw new Error('カード生成結果に対象名またはアーティストがありません。');
+  }
+  const result = {
+    title,
+    artist,
+    hook: stripTracking(card.hook as string).trim(),
+    recall_phrase: stripTracking(card.recall_phrase as string).trim(),
+    background: stripTracking(card.background as string).trim(),
+  };
+  if (!result.hook || !result.recall_phrase || !result.background) {
+    throw new Error('カード生成結果に必要な本文がありません。');
+  }
+  return result;
+}
+
 export async function compressSession(
   work: Work,
   history: Message[]
@@ -33,12 +61,5 @@ ${transcript}`;
     system: compressPrompt.system,
     user,
   });
-  const parsed = JSON.parse(raw || '{}') as Partial<CompressedCard>;
-  return {
-    title: parsed.title || work.title,
-    artist: parsed.artist || work.artist,
-    hook: stripTracking(parsed.hook ?? ''),
-    recall_phrase: stripTracking(parsed.recall_phrase ?? ''),
-    background: stripTracking(parsed.background ?? ''),
-  };
+  return parseCompressedCard(raw);
 }

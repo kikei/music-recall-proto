@@ -1,10 +1,12 @@
-import { listCards, getCard, type Card } from '../db/cards.js';
+import { listCards, getCardById, type Card } from '../db/cards.js';
 import { embed, cardEmbeddingText } from '../llm/embed.js';
 import { cosineSimilarity } from './similarity.js';
 import { rankRecall } from '../llm/rank.js';
 import { expandCue } from '../llm/expand.js';
 import { parsePlayerJson } from '../player/parse-json.js';
 import type { Player } from '../player/provider.js';
+import { requireCardEmbeddings, type EmbeddedCard } from './card-embeddings.js';
+import type { ProjectCardScope } from './project-card-scope.js';
 
 export interface RecallResult {
   id: string;
@@ -33,19 +35,13 @@ const SHOW = 7;
 async function recallByVector(
   queryText: string,
   queryVector: number[],
-  userId: string,
-  excludeId?: string,
+  cards: EmbeddedCard[],
   direction?: string
 ): Promise<RecallResult[]> {
-  const cards = listCards(userId).filter(
-    c => c.embedding && c.id !== excludeId
-  );
-  if (cards.length === 0) return [];
-
   const pool = cards
     .map(card => ({
       card,
-      score: cosineSimilarity(queryVector, JSON.parse(card.embedding!)),
+      score: cosineSimilarity(queryVector, JSON.parse(card.embedding)),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, POOL_SIZE)
@@ -67,17 +63,21 @@ async function recallByVector(
 
   const byId = new Map(pool.map(card => [card.id, card]));
   const seen = new Set<string>();
+  for (const result of ranked) {
+    if (!byId.has(result.id) || seen.has(result.id)) {
+      throw new Error('想起結果に候補外または重複したカードがあります。');
+    }
+    seen.add(result.id);
+  }
   return ranked
-    .filter(r => byId.has(r.id))
     .sort((a, b) => b.relevance - a.relevance)
-    .filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true)))
     .slice(0, SHOW)
     .map(r => toResult(byId.get(r.id)!, r.relevance, r.reason));
 }
 
 function toResult(card: Card, relevance: number, reason: string): RecallResult {
   return {
-    id: card.id,
+    id: card.public_id,
     title: card.title,
     artist: card.artist,
     hook: card.hook,
@@ -96,14 +96,15 @@ function toResult(card: Card, relevance: number, reason: string): RecallResult {
 // being lost in the embedding.
 export async function recall(
   query: string,
-  userId: string
+  scope: ProjectCardScope
 ): Promise<RecallResult[]> {
-  const cards = listCards(userId).filter(c => c.embedding);
+  const cards = listCards(scope.projectId, scope.userId);
   if (cards.length === 0) return [];
+  requireCardEmbeddings(cards, '想起用の埋め込みがないカードがあります。');
   const impression = await expandCue(query);
   const cueText = impression ? `${query}\n${impression}` : query;
   const queryVector = await embed(cueText);
-  return recallByVector(cueText, queryVector, userId);
+  return recallByVector(cueText, queryVector, cards);
 }
 
 // Recall starting from a single card. `direction` steers the recall toward a
@@ -112,14 +113,24 @@ export async function recall(
 // the candidate pool also leans that way, and the LLM rerank is steered too.
 export async function recallFromCard(
   cardId: string,
-  userId: string,
+  scope: ProjectCardScope,
   direction?: string
 ): Promise<RecallResult[]> {
-  const card = getCard(cardId, userId);
-  if (!card?.embedding) return [];
+  const card = getCardById(cardId, scope.userId);
+  if (!card || card.project_id !== scope.projectId) {
+    throw new Error('想起元のカードが見つかりません。');
+  }
+  if (!card.embedding) {
+    throw new Error('想起元のカードに埋め込みがありません。');
+  }
   const queryText = cardEmbeddingText(card);
   const queryVector = direction
     ? await embed(`${queryText}\n方向性: ${direction}`)
     : (JSON.parse(card.embedding) as number[]);
-  return recallByVector(queryText, queryVector, userId, card.id, direction);
+  const cards = listCards(scope.projectId, scope.userId).filter(
+    candidate => candidate.id !== card.id
+  );
+  if (cards.length === 0) return [];
+  requireCardEmbeddings(cards, '想起用の埋め込みがないカードがあります。');
+  return recallByVector(queryText, queryVector, cards, direction);
 }

@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { oidcVerifier } from './oidc-verifier.js';
 import { runWithUser } from './request-context.js';
-import { findOrCreateUser } from '../db/users.js';
+import { provisionUser } from '../accounts/provision-user.js';
 
 // Every route carries the signed-in account id. Declared here so routes can be
 // typed as Hono<AppEnv> and read c.get('userId') safely.
@@ -27,7 +27,7 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     return c.json({ error: 'ログインし直してください' }, 401);
   }
 
-  const user = findOrCreateUser(subject);
+  const user = provisionUser(subject);
   c.set('userId', user.id);
   return runWithUser(user.id, () => next());
 };

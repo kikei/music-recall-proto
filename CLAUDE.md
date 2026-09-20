@@ -13,9 +13,9 @@
 
 ## スタック
 
-- フロント: Vite + React 19 (`src/`)。`screens/` に 5 画面 (`CardsScreen` /
-  `RecallScreen` / `SessionScreen` / `SettingsScreen` / `StartSessionForm`)、
-  `api/` がクライアント。
+- フロント: Vite + React 19 (`src/`)。`screens/` に 6 画面 (`CardsScreen` /
+  `RecallScreen` / `SessionScreen` / `AccountSettingsScreen` /
+  `ProjectSettingsScreen` / `StartSessionForm`)、`api/` がクライアント。
 - バックエンド: Hono + @hono/node-server (`server/`)。`db/` データ層、
   `llm/` OpenAI 連携、`cards/` 想起とカード生成、`player/` プレイヤー解決
   (Spotify / Apple Music / YouTube / ニコニコ動画)、`routes/` エンドポイント。
@@ -27,9 +27,13 @@
 
 - `/api/*` は全て `requireUser` を通る。認証バイパスの開発用フラグは作らない
   (本番で有効化される事故を避けるため)。ローカルは Logto の dev テナントを使う。
-- カード・セッション・利用量は `user_id` で所有者スコープ。DB 層の関数は
-  `userId` を必須引数に取る (呼び出し側が絞り忘れられない形にしてある)。
-  **想起の候補収集が他人のカードを拾わないこと**が最重要。
+- カードはプロジェクトに所属し、`private` / `members` / `public` の公開範囲を
+  持つ。`private` は作成者本人だけ、`members` はプロジェクトメンバー、
+  `public` は未ログインでも閲覧できる。セッションと対話ログは常に作成者本人
+  だけが閲覧する。**想起の候補収集が閲覧権限のないカードを拾わないこと**が
+  最重要。
+- API キーと利用量は引き続き `user_id` 単位。プロジェクトへの権限は
+  `project_members` で判定し、データの所属先と課金主体を混同しない。
 - アカウントは Logto のユーザー ID (`subject`) で引く。プロフィールは複製せず、
   表示は Logto の SDK 側から取る。
 

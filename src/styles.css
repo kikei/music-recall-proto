@@ -105,9 +105,9 @@ body {
   flex-shrink: 0;
 }
 
-/* Brand row: the wordmark (home) on the left and a + to start a session on the
-   right, sharing the header rule. */
+/* Project switcher on the left and a + to start a session on the right. */
 .brand {
+  position: relative;
   height: 40px;
   display: flex;
   align-items: center;
@@ -116,16 +116,143 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.brand-home {
-  background: none;
-  border: none;
+.project-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.project-switcher-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-width: 0;
   padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--ink);
   font-size: 18px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.25;
   letter-spacing: 0.04em;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.project-switcher-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.project-switcher-trigger svg {
+  flex: none;
+  width: 10px;
+  height: 7px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.12s ease;
+}
+
+.project-switcher-trigger[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.project-switcher-trigger:hover svg {
+  stroke: var(--accent);
+}
+
+.project-switcher-trigger:hover,
+.project-switcher-trigger[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+.project-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  min-width: 210px;
+  max-width: 270px;
+  padding: 6px;
+  border: 1px solid rgba(200, 162, 107, 0.22);
+  border-radius: 10px;
+  background: linear-gradient(145deg, #2a2634 0%, #211e2a 100%);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.project-switcher-option {
+  display: flex;
+  text-decoration: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-switcher-option:hover,
+.project-switcher-option:focus-visible {
+  background: rgba(255, 255, 255, 0.055);
+  outline: none;
+}
+
+.project-switcher-option.selected {
+  background: rgba(200, 162, 107, 0.1);
+}
+
+.project-switcher-option > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.project-switcher-check {
+  flex: 0 0 12px;
+  width: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+}
+
+.project-switcher-divider {
+  height: 1px;
+  margin: 5px 5px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.project-switcher-command svg {
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.project-switcher-command:hover,
+.project-switcher-command:focus-visible {
+  background: rgba(200, 162, 107, 0.1);
 }
 
 /* New-session action: a quiet circular + that fills with the accent on hover or
@@ -173,9 +300,6 @@ body {
   height: 13px;
 }
 
-/* The brand and the + trigger the same action, so hovering the wordmark lights
-   the + as if it were hovered itself. */
-.brand-home:hover ~ .brand-new,
 .brand-new:hover,
 .brand-new.active {
   background: var(--accent);
@@ -205,7 +329,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-home:hover ~ .brand-new,
   .brand-new:hover,
   .brand-new.active {
     animation: none;
@@ -262,13 +385,14 @@ body {
 }
 
 .side-card {
+  text-decoration: none;
   display: block;
   width: 100%;
   text-align: left;
   background: none;
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 6px 8px;
   color: var(--ink);
   cursor: pointer;
   font-size: 14px;
@@ -382,6 +506,8 @@ body {
    the icons so the gap beside the name is part of the target rather than dead
    ground, and takes a little height for the same reason. */
 .side-account-name {
+  display: block;
+  text-decoration: none;
   flex: 1;
   min-width: 0;
   padding: 5px 8px 5px 10px;
@@ -643,6 +769,7 @@ body {
 }
 
 .side-item-main {
+  text-decoration: none;
   flex: 1;
   min-width: 0;
   background: none;
@@ -715,6 +842,7 @@ body {
 }
 
 .rail-detail-link {
+  text-decoration: none;
   align-self: flex-start;
   background: none;
   border: none;
@@ -751,6 +879,7 @@ body {
 /* Edit/delete ride in the sticky title bar, to the right of the work title. */
 .card-actions {
   display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
   gap: 16px;
 }
@@ -762,6 +891,7 @@ body {
   color: var(--muted);
   font-size: 13px;
   font-weight: 400;
+  line-height: 1.2;
   cursor: pointer;
 }
 
@@ -788,6 +918,325 @@ body {
   .side-scroll {
     overflow: visible;
   }
+}
+
+/* Project navigation, card audience, and the signed-out public card view. */
+.visibility-control {
+  position: relative;
+  top: 2px;
+}
+
+/* On a private card the visibility control doubles as the persistent status
+   marker in the detail header. A large shackle and keyhole keep the icon
+   legible as a lock at this size; colour is reserved for the icon itself. */
+.visibility-control.private {
+  color: var(--ink);
+}
+
+.card-actions .visibility-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 112px;
+  min-height: 26px;
+  padding: 4px 8px 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.visibility-icon-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.visibility-trigger-label {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.card-actions .visibility-trigger:hover,
+.card-actions .visibility-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.card-actions .visibility-trigger:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.private-lock {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  overflow: visible;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.public-globe {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.private-lock circle {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.private-lock .private-lock-keyway {
+  stroke-width: 1.8;
+}
+
+.visibility-chevron {
+  margin-left: auto;
+  width: 9px;
+  height: 6px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.visibility-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.card-actions .visibility-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.card-actions .visibility-option:hover,
+.card-actions .visibility-option:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.card-actions .visibility-option.selected {
+  background: var(--panel-2);
+}
+
+.visibility-check {
+  width: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+}
+
+.project-private-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  gap: 8px;
+  min-height: 32px;
+  margin: 4px 0 10px;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.project-private-toggle input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.project-private-toggle:has(input:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.project-id {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.project-fields .project-id-hint {
+  font-size: 12px;
+}
+
+.project-fields + .key-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.project-delete {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.project-delete-copy {
+  min-width: 0;
+}
+
+.project-delete-copy .key-title {
+  margin-bottom: 2px;
+}
+
+.project-delete-copy .hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.project-delete-copy .project-delete-warning {
+  color: #e08a8a;
+}
+
+.project-delete-copy .project-delete-unavailable {
+  margin-top: 5px;
+}
+
+.project-delete-button {
+  flex: none;
+  align-self: flex-end;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-color: rgba(224, 138, 138, 0.45);
+  background: transparent;
+}
+
+.project-delete-button:hover:not(:disabled) {
+  border-color: #e08a8a;
+  background: rgba(224, 138, 138, 0.08);
+}
+
+.account-project-settings {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.account-delete {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.account-project-settings-copy,
+.account-delete-copy {
+  min-width: 0;
+}
+
+.account-project-settings-copy .hint,
+.account-delete-copy .hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.account-delete-copy .hint {
+  color: #e08a8a;
+}
+
+.account-project-settings-link {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 3px;
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.account-project-settings-link:hover {
+  text-decoration: underline;
+}
+
+.account-project-settings-link svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-delete-button {
+  flex: none;
+  align-self: flex-end;
+  max-width: 100%;
+  border-color: rgba(224, 138, 138, 0.45);
+  background: transparent;
+}
+
+.account-delete-button:hover:not(:disabled) {
+  border-color: #e08a8a;
+  background: rgba(224, 138, 138, 0.08);
+}
+
+.public-card-page {
+  max-width: 900px;
+}
+
+.public-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.public-card-header a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.public-sign-in {
+  position: fixed;
+  top: 20px;
+  right: 20px;
 }
 
 .header h1 {
@@ -1285,6 +1734,7 @@ button.primary {
 }
 
 .card-summary {
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1311,11 +1761,13 @@ button.primary {
   margin-top: 0;
 }
 
-.card.clickable {
-  cursor: pointer;
+.recall-result-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
-.card.clickable:hover {
+.card.recalled:has(.recall-result-link:hover) {
   border-color: var(--accent);
 }
 
@@ -1361,6 +1813,82 @@ button.primary {
 
 .modal-bar .danger {
   color: #e08a8a;
+}
+
+.project-create-overlay {
+  z-index: 50;
+}
+
+.project-create-modal {
+  max-width: 440px;
+  margin-top: 12vh;
+  padding: 20px;
+}
+
+.project-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.project-create-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.project-create-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.project-create-close:hover {
+  color: var(--ink);
+}
+
+.project-create-close svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.project-create-field {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.project-create-field input {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.project-create-error {
+  margin: 0 0 12px;
+}
+
+.project-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.project-create-actions button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 /* Held to the same reading width as the settings screen and centred with it,

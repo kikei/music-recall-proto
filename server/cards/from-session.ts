@@ -1,12 +1,14 @@
-import { getSession, closeSession, type Session } from '../db/sessions.js';
+import { getSessionById, closeSession, type Session } from '../db/sessions.js';
 import { listMessages } from '../db/messages.js';
 import {
   createCard,
   updateCard,
-  getCard,
+  getCardById,
   setCardPlayer,
   type Card,
 } from '../db/cards.js';
+import { getProjectById } from '../db/projects.js';
+import { selectOwnBaseCard } from '../db/card-access.js';
 import { compressSession } from '../llm/compress.js';
 import { embed, cardEmbeddingText } from '../llm/embed.js';
 import { resolvePlayer, playerConfigured } from '../player/resolve.js';
@@ -18,7 +20,7 @@ export async function createCardFromSession(
   sessionId: string,
   userId: string
 ): Promise<Card> {
-  const session = getSession(sessionId, userId);
+  const session = getSessionById(sessionId, userId);
   if (!session) throw new Error('session not found');
 
   const history = listMessages(sessionId);
@@ -28,8 +30,20 @@ export async function createCardFromSession(
   );
 
   const embedding = await embed(cardEmbeddingText(compressed));
+  const base = session.base_card_id
+    ? getCardById(session.base_card_id, userId)
+    : undefined;
+  // Continuing one's own card updates it in place. A member may also start
+  // from somebody else's shared card, but finishing that session must create a
+  // new card owned by the member instead of replacing the original card or
+  // attaching the member's private transcript to it.
+  const ownBase = selectOwnBaseCard(base, userId);
+  const project = getProjectById(session.project_id);
+  if (!project) throw new Error('project not found');
   const input = {
-    user_id: userId,
+    project_id: session.project_id,
+    created_by_user_id: userId,
+    visibility: ownBase?.visibility ?? project.default_card_visibility,
     session_id: sessionId,
     title: compressed.title,
     artist: compressed.artist,
@@ -42,37 +56,48 @@ export async function createCardFromSession(
     embedding,
   };
 
-  // Continued session: overwrite the original card if it still exists.
-  const overwrite =
-    session.base_card_id && getCard(session.base_card_id, userId)
-      ? updateCard(session.base_card_id, userId, input)
-      : undefined;
-  const card = overwrite ?? createCard(input);
+  // Resolve the optional player before mutating the card. If a configured
+  // provider is unavailable, the session remains open and no half-finished
+  // card is left behind.
+  const playerUpdate = await resolveCardPlayer(
+    session,
+    ownBase,
+    compressed.title,
+    compressed.artist
+  );
 
-  await persistCardPlayer(session, card);
+  // A continued session overwrites the original only when it belongs to this
+  // user. Continuing a shared card produces a separate card above.
+  const card = ownBase
+    ? updateCard(ownBase.id, userId, input)
+    : createCard(input);
+  if (!card) throw new Error('継続元のカードを更新できませんでした。');
+
+  if (playerUpdate !== undefined) setCardPlayer(card.id, playerUpdate);
 
   closeSession(sessionId, userId);
-  return getCard(card.id, userId) ?? card;
+  const saved = getCardById(card.id, userId);
+  if (!saved) throw new Error('保存したカードを読み取れませんでした。');
+  return saved;
 }
 
-// Save the listening player on the card. Priority order:
+// Decide the listening player to save on the card. Priority order:
 // (1) If a URL was pasted at start, use it (no API key, explicit user choice).
 // (2) On a continued session, keep the original card's existing player.
 //     The work has not changed, so avoid re-searching and destabilizing it.
 // (3) Otherwise resolve via the dedicated API search. Searching stays
 //     unsettled while no credentials exist (can be re-resolved after keys).
-async function persistCardPlayer(session: Session, card: Card): Promise<void> {
-  if (session.player) {
-    setCardPlayer(card.id, card.user_id, session.player);
-    return;
-  }
-  if (card.player) return;
-  const player = await resolvePlayer(card.title, card.artist);
+async function resolveCardPlayer(
+  session: Session,
+  ownBase: Card | undefined,
+  title: string,
+  artist: string
+): Promise<string | null | undefined> {
+  if (session.player) return session.player;
+  if (ownBase?.player) return undefined;
+  const player = await resolvePlayer(title, artist);
   if (player || playerConfigured()) {
-    setCardPlayer(
-      card.id,
-      card.user_id,
-      player ? JSON.stringify(player) : null
-    );
+    return player ? JSON.stringify(player) : null;
   }
+  return undefined;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createSession, lookupPlayer, type Session } from '../api/client.js';
+import { lookupPlayer } from '../api/players.js';
+import { createSession, type Session } from '../api/sessions.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
 import { PlayerEmbed } from '../components/PlayerEmbed.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
@@ -7,8 +8,10 @@ import { parsePlayerUrl } from '../player/parse-url.js';
 // Start a new listening session. Pasting a viewing URL fills the target and
 // artist from metadata, so they can be omitted.
 export function StartSessionForm({
+  projectSlug,
   onStarted,
 }: {
+  projectSlug: string;
   onStarted: (session: Session) => void;
 }) {
   const [title, setTitle] = useState('');
@@ -18,6 +21,7 @@ export function StartSessionForm({
   const [looking, setLooking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [lookupError, setLookupError] = useState('');
   const [showServices, setShowServices] = useState(false);
   const servicesRef = useRef<HTMLSpanElement>(null);
 
@@ -51,6 +55,7 @@ export function StartSessionForm({
   useEffect(() => {
     const url = playerUrl.trim();
     if (!url) {
+      setLookupError('');
       setLookedUp(false);
       setTrackLevel(null);
       setAlbum('');
@@ -71,11 +76,12 @@ export function StartSessionForm({
         setReleased(meta.released ?? '');
         setLabel(meta.label ?? '');
         setLookedUp(true);
-      } catch {
-        // If lookup fails, leave it to manual input - but not if a newer
-        // paste already resolved first (this stale one arriving late must
-        // not clobber that result).
+        setLookupError('');
+      } catch (e) {
+        // Manual input remains available, but surface why auto-fill did not
+        // happen instead of silently treating the lookup as empty.
         if (cancelled) return;
+        setLookupError(e instanceof Error ? e.message : String(e));
         setLookedUp(false);
         setTrackLevel(null);
         setAlbum('');
@@ -95,7 +101,7 @@ export function StartSessionForm({
     setBusy(true);
     setError('');
     try {
-      const res = await createSession(title, artist, memo.trim(), {
+      const res = await createSession(projectSlug, title, artist, memo.trim(), {
         playerUrl: playerUrl.trim() || undefined,
         metadataExtras: lookedUp ? { album, released, label } : undefined,
       });
@@ -148,6 +154,7 @@ export function StartSessionForm({
             />
           </label>
           {looking && <p className="hint">URL からデータを取得しています…</p>}
+          {lookupError && <p className="error">{lookupError}</p>}
           <label className="field">
             <span className="field-label">
               {trackLevel === true

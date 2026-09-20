@@ -13,7 +13,7 @@ export async function suggestFragment(
     user: lastComment,
   });
   try {
-    const parsed = JSON.parse(raw || '{}') as { suggestion?: string };
+    const parsed = JSON.parse(raw) as { suggestion?: string };
     return typeof parsed.suggestion === 'string' ? parsed.suggestion : null;
   } catch {
     return null;

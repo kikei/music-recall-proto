@@ -30,7 +30,10 @@ export async function niconicoLookup(id: string): Promise<NiconicoMeta | null> {
   const res = await fetch(
     `https://ext.nicovideo.jp/api/getthumbinfo/${encodeURIComponent(id)}`
   );
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`ニコニコ動画の情報取得に失敗しました (${res.status})。`);
+  }
   const xml = await res.text();
   // On failure the API returns <thumb_response status="fail">.
   if (/status="fail"/.test(xml)) return null;

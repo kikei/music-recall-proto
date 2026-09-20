@@ -113,5 +113,11 @@ describe('parsePlayerUrl', () => {
     it('returns null when the id is missing', () => {
       expect(parsePlayerUrl('https://music.apple.com/jp/album')).toBeNull();
     });
+
+    it('returns null when the storefront is missing', () => {
+      expect(
+        parsePlayerUrl('https://music.apple.com/album/some-title/1234567890')
+      ).toBeNull();
+    });
   });
 });

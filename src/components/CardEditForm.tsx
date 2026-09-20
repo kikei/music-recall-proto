@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { editCard, playerToUrl, type Card } from '../api/client.js';
+import { editCard, type Card } from '../api/cards.js';
+import { playerToUrl } from '../api/players.js';
 import { AutoTextarea } from './AutoTextarea.js';
 import { CardTitleText } from './CardTitleText.js';
 
@@ -29,7 +30,7 @@ export function CardEditForm({
     setBusy(true);
     setError('');
     try {
-      const updated = await editCard(card.id, {
+      const updated = await editCard(card.projectSlug, card.id, {
         hook,
         recall_phrase: recallPhrase,
         background,

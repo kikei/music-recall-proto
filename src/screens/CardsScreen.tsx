@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { listCards, type Card } from '../api/client.js';
+import { listCards, type Card } from '../api/cards.js';
 import { CardSummary } from '../components/CardSummary.js';
 
 export function CardsScreen({
+  projectSlug,
   dataVersion,
   onOpenCard,
 }: {
+  projectSlug: string;
   dataVersion: number;
   onOpenCard: (cardId: string, fromRecall: boolean) => void;
 }) {
@@ -13,14 +15,23 @@ export function CardsScreen({
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+    setCards([]);
+    setError('');
     (async () => {
       try {
-        setCards(await listCards());
+        const next = await listCards(projectSlug);
+        if (!cancelled) setCards(next);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
       }
     })();
-  }, [dataVersion]);
+    return () => {
+      cancelled = true;
+    };
+  }, [dataVersion, projectSlug]);
 
   if (error) return <p className="error">{error}</p>;
   if (cards.length === 0) {

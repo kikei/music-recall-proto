@@ -23,7 +23,9 @@ export async function youtubeLookup(id: string): Promise<YouTubeMeta | null> {
     `https://www.googleapis.com/youtube/v3/videos?part=snippet,status` +
       `&id=${encodeURIComponent(id)}&key=${key}`
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new Error(`YouTube の情報取得に失敗しました (${res.status})。`);
+  }
   const json = (await res.json()) as {
     items?: {
       snippet?: {
@@ -62,7 +64,9 @@ export async function youtubeSearch(
     `https://www.googleapis.com/youtube/v3/search?part=snippet` +
       `&type=video&videoEmbeddable=true&maxResults=5&q=${q}&key=${key}`
   );
-  if (!res.ok) return [];
+  if (!res.ok) {
+    throw new Error(`YouTube の検索に失敗しました (${res.status})。`);
+  }
   const json = (await res.json()) as {
     items?: {
       id?: { videoId?: string };

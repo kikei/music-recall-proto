@@ -65,9 +65,9 @@ const APPLE_TYPES = new Set(['album', 'song', 'playlist']);
 function parseAppleUrl(url: URL): Player | null {
   const parts = url.pathname.split('/').filter(Boolean);
   const ti = parts.findIndex(p => APPLE_TYPES.has(p));
-  if (ti < 0) return null;
+  if (ti < 1) return null;
   const kind = parts[ti] as 'album' | 'song' | 'playlist';
-  const storefront = ti >= 1 ? parts[ti - 1] : 'us';
+  const storefront = parts[ti - 1];
   const id = parts[parts.length - 1];
   if (!id || APPLE_TYPES.has(id)) return null;
   if (kind === 'album') {

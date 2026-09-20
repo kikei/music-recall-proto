@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
+import type { Card } from '../api/cards.js';
+import { relatedToSession, recallHit } from '../api/recall.js';
 import {
-  getSession,
-  sendFragment,
-  research,
-  makeCard,
-  relatedToSession,
-  recallHit,
   editSession,
+  getSession,
+  makeCard,
+  research,
+  sendFragment,
   suggestFragment,
   type Session,
   type ChatMessage,
-  type Card,
-} from '../api/client.js';
+} from '../api/sessions.js';
 import { RichText } from '../components/RichText.js';
 import { InlineEditText } from '../components/InlineEditText.js';
 import { MetadataEditor } from '../components/MetadataEditor.js';
@@ -19,15 +18,18 @@ import { AutoTextarea } from '../components/AutoTextarea.js';
 import { RelatedRail } from '../components/RelatedRail.js';
 import { CardView } from '../components/CardView.js';
 import { PlayerEmbed } from '../components/PlayerEmbed.js';
+import { NavLink } from '../components/NavLink.js';
 
 // The foreground session: the conversation with the Co-listener plus an ambient
 // recall rail that updates after each Co-listener turn.
 export function SessionView({
+  projectSlug,
   sessionId,
   onCardCreated,
   onOpenCard,
   onSessionUpdated,
 }: {
+  projectSlug: string;
   sessionId: string;
   onCardCreated: (card: Card) => void;
   onOpenCard: (cardId: string, fromRecall: boolean) => void;
@@ -46,7 +48,7 @@ export function SessionView({
   // Open a recalled card inline (keeping the session), bumping its reference
   // count like any recall hit.
   function openRelated(card: Card) {
-    recallHit(card.id).catch(() => {});
+    recallHit(projectSlug, card.id).catch(() => {});
     setSelected(card);
   }
 
@@ -55,13 +57,21 @@ export function SessionView({
     let cancelled = false;
     (async () => {
       try {
-        const res = await getSession(sessionId);
+        const res = await getSession(projectSlug, sessionId);
         if (cancelled) return;
         setSession(res.session);
         setMessages(res.messages);
         refreshRelated();
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message === 'not found'
+              ? 'セッションが見つかりません。'
+              : e instanceof Error
+                ? e.message
+                : String(e)
+          );
+        }
       }
     })();
     return () => {
@@ -77,7 +87,7 @@ export function SessionView({
   useEffect(() => {
     if (messages.length === 0) return;
     let cancelled = false;
-    suggestFragment(sessionId)
+    suggestFragment(projectSlug, sessionId)
       .then(res => {
         if (!cancelled) setFragmentExample(res.suggestion);
       })
@@ -98,7 +108,7 @@ export function SessionView({
   }) {
     setError('');
     try {
-      const updated = await editSession(sessionId, patch);
+      const updated = await editSession(projectSlug, sessionId, patch);
       setSession(updated);
       onSessionUpdated?.(updated);
     } catch (e) {
@@ -109,7 +119,7 @@ export function SessionView({
 
   async function refreshRelated() {
     try {
-      setRelated(await relatedToSession(sessionId));
+      setRelated(await relatedToSession(projectSlug, sessionId));
     } catch {
       // Ambient recall is best-effort; ignore failures
     }
@@ -130,7 +140,7 @@ export function SessionView({
   async function send() {
     const content = draft.trim();
     if (!content) return;
-    const res = await run(() => sendFragment(sessionId, content));
+    const res = await run(() => sendFragment(projectSlug, sessionId, content));
     if (res) {
       setMessages(prev => [...prev, res.user, res.assistant]);
       setDraft('');
@@ -141,7 +151,7 @@ export function SessionView({
   // "research": have the Co-listener run a web search again. Any input is passed
   // as the point to investigate.
   async function investigate() {
-    const res = await run(() => research(sessionId, draft.trim()));
+    const res = await run(() => research(projectSlug, sessionId, draft.trim()));
     if (res) {
       setMessages(prev =>
         res.user ? [...prev, res.user, res.assistant] : [...prev, res.assistant]
@@ -154,12 +164,16 @@ export function SessionView({
   // Text left in the input is taken in as the "last comment before recording"
   // before compressing into a card.
   async function finish() {
-    const made = await run(() => makeCard(sessionId, draft.trim()));
+    const made = await run(() =>
+      makeCard(projectSlug, sessionId, draft.trim())
+    );
     if (made) onCardCreated(made);
   }
 
   if (!session) {
-    return <p className="hint">読み込んでいます…</p>;
+    return (
+      <p className={error ? 'error' : 'hint'}>{error || '読み込んでいます…'}</p>
+    );
   }
 
   return (
@@ -209,12 +223,17 @@ export function SessionView({
           </div>
           <CardView card={selected} />
           {selected.player && <PlayerEmbed player={selected.player} compact />}
-          <button
+          <NavLink
             className="rail-detail-link"
-            onClick={() => onOpenCard(selected.id, true)}
+            to={{
+              kind: 'card',
+              projectSlug: selected.projectSlug,
+              id: selected.id,
+            }}
+            onNavigate={() => onOpenCard(selected.id, true)}
           >
             詳細ページを開く
-          </button>
+          </NavLink>
         </aside>
       ) : (
         <RelatedRail

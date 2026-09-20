@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -11,6 +11,9 @@ export default defineConfig({
     env: {
       DB_PATH: '.vitest-tmp/test.sqlite',
     },
+    // The server build used to emit compiled test files into dist-server.
+    // Never collect generated output alongside the TypeScript sources.
+    exclude: [...configDefaults.exclude, 'dist-server/**'],
     fileParallelism: false,
   },
 });

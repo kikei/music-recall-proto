@@ -1,23 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { lookupPlayer } from '../api/players.js';
+import type { ListenItem } from '../api/listen-list.js';
+import { lookupPlayer, playerToUrl } from '../api/players.js';
 import { createSession, type Session } from '../api/sessions.js';
 import { AutoTextarea } from '../components/AutoTextarea.js';
 import { PlayerEmbed } from '../components/PlayerEmbed.js';
 import { parsePlayerUrl } from '../player/parse-url.js';
 
 // Start a new listening session. Pasting a viewing URL fills the target and
-// artist from metadata, so they can be omitted.
+// artist from metadata, so they can be omitted. A song picked from the listen
+// list fills the same fields and moves the cursor to where the impression is
+// written; the item leaves the list once the session starts.
 export function StartSessionForm({
   projectSlug,
+  fill,
+  onFillApplied,
   onStarted,
 }: {
   projectSlug: string;
-  onStarted: (session: Session) => void;
+  fill: ListenItem | null;
+  onFillApplied: () => void;
+  onStarted: (session: Session, listenItemId?: string) => void;
 }) {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [memo, setMemo] = useState('');
   const [playerUrl, setPlayerUrl] = useState('');
+  // The listen list item this form was last filled in from, if any: starting
+  // the session removes it from the list. Only picking a different item (fill
+  // below) changes it -- editing the fields does not, since title/artist text
+  // cannot safely tell "still the same song, metadata corrected" apart from
+  // "a different song, same artist".
+  const [listenItemId, setListenItemId] = useState<string | null>(null);
+  const [focusNext, setFocusNext] = useState<'memo' | 'title' | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const memoRef = useRef<HTMLTextAreaElement>(null);
   const [looking, setLooking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -97,6 +113,44 @@ export function StartSessionForm({
     };
   }, [playerUrl]);
 
+  // Fill the fields from a listen list item. What was written for another song
+  // is not carried over.
+  useEffect(() => {
+    if (!fill) return;
+    onFillApplied();
+    setPlayerUrl(playerToUrl(fill.player));
+    // A plain-text entry (no link, no artist already resolved) is usually a
+    // quickly jotted artist name ("amazarashi") rather than a specific song or
+    // album title, so it goes into the artist field: a guess that is right
+    // more often than assuming it names the work itself.
+    const plainText = !fill.player && !fill.artist;
+    setTitle(plainText ? '' : fill.title);
+    setArtist(plainText ? fill.title : fill.artist);
+    setMemo('');
+    setListenItemId(fill.id);
+    setFocusNext(plainText ? 'title' : 'memo');
+    // Runs once per picked item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fill]);
+
+  // The impression box only appears once the work is known, which for a link
+  // that is still being looked up is a moment after the fill.
+  const showMemo = !!title.trim() && !!artist.trim();
+  useEffect(() => {
+    if (focusNext === 'title') {
+      titleRef.current?.focus();
+      setFocusNext(null);
+    } else if (focusNext === 'memo' && showMemo) {
+      memoRef.current?.focus();
+      setFocusNext(null);
+    }
+  }, [focusNext, showMemo]);
+  // A link that cannot be resolved never shows the box; do not leave the
+  // focus request waiting to jump in later.
+  useEffect(() => {
+    if (lookupError) setFocusNext(null);
+  }, [lookupError]);
+
   async function start() {
     setBusy(true);
     setError('');
@@ -104,8 +158,9 @@ export function StartSessionForm({
       const res = await createSession(projectSlug, title, artist, memo.trim(), {
         playerUrl: playerUrl.trim() || undefined,
         metadataExtras: lookedUp ? { album, released, label } : undefined,
+        listenItemId: listenItemId ?? undefined,
       });
-      onStarted(res.session);
+      onStarted(res.session, listenItemId ?? undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -121,7 +176,7 @@ export function StartSessionForm({
 
   return (
     <section className="start-form">
-      <div className={player ? 'start-grid has-preview' : 'start-grid'}>
+      <div className="start-grid">
         <div className="start-fields">
           <p className="lead">いま、なにを聴いていますか?</p>
           <label className="field">
@@ -164,6 +219,7 @@ export function StartSessionForm({
                   : '楽曲・アルバム'}
             </span>
             <input
+              ref={titleRef}
               placeholder="例: Kid A / Idioteque / ○○のライブ盤"
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -188,23 +244,24 @@ export function StartSessionForm({
                   />
                 </label>
               )}
-              <label className="field">
+              <label className="field field-released">
                 <span className="field-label">発売日 (任意)</span>
                 <input
                   value={released}
                   onChange={e => setReleased(e.target.value)}
                 />
               </label>
-              <label className="field">
+              <label className="field field-record-label">
                 <span className="field-label">レーベル (任意)</span>
                 <input value={label} onChange={e => setLabel(e.target.value)} />
               </label>
             </div>
           )}
-          {title.trim() && artist.trim() && (
+          {showMemo && (
             <label className="field field-memo">
               <span className="field-label">感じたこと・気づいたこと</span>
               <AutoTextarea
+                ref={memoRef}
                 value={memo}
                 onChange={e => setMemo(e.target.value)}
               />
@@ -216,8 +273,10 @@ export function StartSessionForm({
           </button>
         </div>
         {player && (
-          <div className="start-preview">
-            <PlayerEmbed player={player} compact />
+          <div className="start-side">
+            <div className="start-preview">
+              <PlayerEmbed player={player} compact />
+            </div>
           </div>
         )}
       </div>

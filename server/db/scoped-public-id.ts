@@ -2,7 +2,7 @@ import { generatePublicId } from '../ids/public-id.js';
 import { db } from './open.js';
 
 export function newPublicId(
-  table: 'cards' | 'sessions',
+  table: 'cards' | 'sessions' | 'listen_items',
   projectId: string
 ): string {
   for (;;) {

@@ -89,6 +89,7 @@ export function deleteUserAccount(id: string): boolean {
          (SELECT id FROM sessions WHERE created_by_user_id = ?)`
     ).run(id, id);
     db.prepare('DELETE FROM sessions WHERE created_by_user_id = ?').run(id);
+    db.prepare('DELETE FROM listen_items WHERE user_id = ?').run(id);
     db.prepare('DELETE FROM project_members WHERE user_id = ?').run(id);
     db.prepare('DELETE FROM user_credentials WHERE user_id = ?').run(id);
     db.prepare('DELETE FROM llm_usage WHERE user_id = ?').run(id);

@@ -8,6 +8,7 @@ export function deleteProjectData(projectId: string): boolean {
   ).run(projectId);
   db.prepare('DELETE FROM cards WHERE project_id = ?').run(projectId);
   db.prepare('DELETE FROM sessions WHERE project_id = ?').run(projectId);
+  db.prepare('DELETE FROM listen_items WHERE project_id = ?').run(projectId);
   db.prepare('DELETE FROM project_members WHERE project_id = ?').run(projectId);
   return (
     db.prepare('DELETE FROM projects WHERE id = ?').run(projectId).changes === 1

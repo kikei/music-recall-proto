@@ -17,9 +17,16 @@ export function RelatedRail({
   return (
     <aside className="related-rail">
       {sessionPlayer && (
-        <div className="rail-player">
-          <PlayerEmbed player={sessionPlayer} compact />
-        </div>
+        <>
+          {/* A blank sticky band, the same height and position as the
+              conversation's .track-header, so the player tucks under it
+              while scrolling instead of just disappearing into the
+              listen-list trigger's floating area with nothing to mask it. */}
+          <div className="rail-cap" aria-hidden />
+          <div className="rail-player">
+            <PlayerEmbed player={sessionPlayer} compact />
+          </div>
+        </>
       )}
       <div className="rail-head">想起されているもの</div>
       {related && related.length === 0 && (

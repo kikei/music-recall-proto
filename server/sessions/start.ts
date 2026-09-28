@@ -1,7 +1,16 @@
 import { selectOwnBaseCard } from '../db/card-access.js';
 import { getCardByPublicId } from '../db/cards.js';
+import {
+  deleteListenItem,
+  getListenItemByPublicId,
+} from '../db/listen-items.js';
 import { addMessage, listMessages, type Message } from '../db/messages.js';
-import { createSession, type Session } from '../db/sessions.js';
+import { db } from '../db/open.js';
+import {
+  createSession,
+  deleteSessionData,
+  type Session,
+} from '../db/sessions.js';
 import { BLANK_METADATA_TEMPLATE } from '../cards/metadata-template.js';
 import {
   composePastedMetadata,
@@ -19,13 +28,17 @@ export interface StartSessionInput {
   continueFromCardId?: string;
   playerUrl?: string;
   metadataExtras?: PastedMetadataExtras;
+  // The listen list item this session was filled in from. It leaves the list
+  // once the session exists, so an item that was only opened stays listed.
+  listenItemId?: string;
 }
 
 export type StartSessionResult =
   | { kind: 'started'; session: Session; messages: Message[] }
   | { kind: 'unsupported-player-url' }
   | { kind: 'missing-work' }
-  | { kind: 'base-card-not-found' };
+  | { kind: 'base-card-not-found' }
+  | { kind: 'listen-item-not-found' };
 
 // Start a session after the route has validated the request value types.
 export async function startSession(
@@ -54,6 +67,13 @@ export async function startSession(
     : undefined;
   if (baseId && !base) return { kind: 'base-card-not-found' };
 
+  const listenItem = input.listenItemId
+    ? getListenItemByPublicId(projectId, input.listenItemId, userId)
+    : undefined;
+  if (input.listenItemId && !listenItem) {
+    return { kind: 'listen-item-not-found' };
+  }
+
   const ownBase = selectOwnBaseCard(base, userId);
   // Another creator's reference notes and conversation remain private.
   const seedMetadata = ownBase?.metadata ?? BLANK_METADATA_TEMPLATE;
@@ -69,23 +89,35 @@ export async function startSession(
     pasted ? JSON.stringify(pasted) : null
   );
 
-  if (ownBase?.session_id) {
-    for (const message of listMessages(ownBase.session_id)) {
-      addMessage(session.id, message.role, message.content);
+  // The opening message is a network call to the LLM and can fail. Until it
+  // succeeds, nothing about this attempt should stick: not a half-started
+  // session sitting in the sidebar with no reply, and not the listen list
+  // item it was filled in from, which the account would otherwise need to
+  // notice missing and re-add by hand.
+  try {
+    if (ownBase?.session_id) {
+      for (const message of listMessages(ownBase.session_id)) {
+        addMessage(session.id, message.role, message.content);
+      }
     }
+
+    if (input.memo?.trim()) {
+      addMessage(session.id, 'user', input.memo.trim());
+    }
+
+    const chatWork = { title: session.title, artist: session.artist };
+    const history = listMessages(session.id);
+    const opening =
+      history.length > 0
+        ? await continueSession(chatWork, history, true)
+        : await openingMessage(chatWork, true);
+    addMessage(session.id, 'assistant', opening);
+  } catch (e) {
+    db.transaction(() => deleteSessionData(session.id))();
+    throw e;
   }
 
-  if (input.memo?.trim()) {
-    addMessage(session.id, 'user', input.memo.trim());
-  }
-
-  const chatWork = { title: session.title, artist: session.artist };
-  const history = listMessages(session.id);
-  const opening =
-    history.length > 0
-      ? await continueSession(chatWork, history, true)
-      : await openingMessage(chatWork, true);
-  addMessage(session.id, 'assistant', opening);
+  if (listenItem) deleteListenItem(listenItem.id, userId);
 
   return {
     kind: 'started',

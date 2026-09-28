@@ -71,13 +71,25 @@ sessions.post('/', async c => {
   const project = c.get('project');
   const body = await readJsonObject(c.req);
   if (!body) return c.json({ error: INVALID_JSON_MESSAGE }, 400);
-  const { title, artist, memo, continueFromCardId, playerUrl, metadataExtras } =
-    body;
+  const {
+    title,
+    artist,
+    memo,
+    continueFromCardId,
+    playerUrl,
+    metadataExtras,
+    listenItemId,
+  } = body;
 
   if (
-    ['title', 'artist', 'memo', 'continueFromCardId', 'playerUrl'].some(key =>
-      hasInvalidOptionalString(body, key)
-    ) ||
+    [
+      'title',
+      'artist',
+      'memo',
+      'continueFromCardId',
+      'playerUrl',
+      'listenItemId',
+    ].some(key => hasInvalidOptionalString(body, key)) ||
     (metadataExtras !== undefined &&
       (metadataExtras === null ||
         typeof metadataExtras !== 'object' ||
@@ -102,6 +114,7 @@ sessions.post('/', async c => {
       typeof continueFromCardId === 'string' ? continueFromCardId : undefined,
     playerUrl: typeof playerUrl === 'string' ? playerUrl : undefined,
     metadataExtras: parseMetadataExtras(metadataExtras),
+    listenItemId: typeof listenItemId === 'string' ? listenItemId : undefined,
   });
   if (result.kind === 'unsupported-player-url') {
     return c.json({ error: '対応していない視聴 URL です。' }, 400);
@@ -114,6 +127,9 @@ sessions.post('/', async c => {
   }
   if (result.kind === 'base-card-not-found') {
     return c.json({ error: '継続元のカードが見つかりません。' }, 404);
+  }
+  if (result.kind === 'listen-item-not-found') {
+    return c.json({ error: '聴きたいリストの項目が見つかりません。' }, 404);
   }
 
   return c.json({

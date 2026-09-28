@@ -11,14 +11,17 @@ import { NavLink } from './components/NavLink.js';
 import { routeFromUrl } from './routing.js';
 import { getAccount } from './api/account.js';
 import { listCards, type Card } from './api/cards.js';
+import type { ListenItem } from './api/listen-list.js';
 import type { Project } from './api/projects.js';
 import {
   deleteSession,
   listActiveSessions,
   type Session,
 } from './api/sessions.js';
+import { ListenListPanel } from './components/ListenListPanel.js';
 import { PublicCardPage } from './components/PublicCardPage.js';
 import { useAppRoute } from './app/useAppRoute.js';
+import { useListenList } from './app/useListenList.js';
 import { useProjects } from './app/useProjects.js';
 import { AppNavigationProvider } from './app/AppNavigationContext.js';
 
@@ -39,6 +42,9 @@ export function App() {
   const projectSlug = 'projectSlug' in view ? view.projectSlug : null;
   const currentProject =
     projects?.find(project => project.slug === projectSlug) ?? null;
+  const listen = useListenList(currentProject?.slug ?? null, setError);
+  // A listen list item waiting to be copied into the start form.
+  const [listenFill, setListenFill] = useState<ListenItem | null>(null);
 
   // Restore open sessions for the sidebar without overriding a direct link.
   useEffect(() => {
@@ -103,12 +109,21 @@ export function App() {
     }
   }
 
-  // A new (or continued) session was started: add it and foreground it.
-  function started(session: Session) {
+  // A new (or continued) session was started: add it and foreground it. A
+  // session started from the listen list has already taken its song off it.
+  function started(session: Session, listenItemId?: string) {
     setOpenSessions(prev =>
       prev.some(s => s.id === session.id) ? prev : [session, ...prev]
     );
+    if (listenItemId) listen.forget(listenItemId);
     foreground(session.id);
+  }
+
+  // Copy a listen list item into the start form, going there if needed.
+  function pickListenItem(item: ListenItem) {
+    if (!currentProject) return;
+    setListenFill(item);
+    navigate({ kind: 'new', projectSlug: currentProject.slug });
   }
 
   // A session finished: it graduates from the workspace into a card page.
@@ -190,6 +205,7 @@ export function App() {
     setError('');
     setOpenSessions([]);
     setRecentCards([]);
+    setListenFill(null);
     navigate({ kind: 'new', projectSlug: slug });
   }
 
@@ -256,99 +272,113 @@ export function App() {
   }
 
   return (
-    <div className="app">
-      <div className="workspace">
-        <AppNavigationProvider navigate={navigate}>
-          <Sidebar
-            sessions={openSessions}
-            activeSessionId={viewSessionId}
-            activeCardId={view.kind === 'card' ? view.id : null}
-            view={view.kind}
-            displayName={displayName}
-            projects={projects}
-            currentProject={currentProject}
-            recallQuery={view.kind === 'recall' ? (view.query ?? null) : null}
-            recentCards={recentCards}
-            onDeleteSession={removeSession}
-            onRecall={runRecall}
-            onSelectProject={selectProject}
-            onProjectCreated={project => {
-              setProjects(previous => [...(previous ?? []), project]);
-              selectProject(project.slug);
-            }}
-          />
-        </AppNavigationProvider>
-        <main className="main">
-          {error && <p className="error">{error}</p>}
-          {view.kind === 'new' && (
-            <StartSessionForm
-              projectSlug={currentProject.slug}
-              onStarted={started}
-            />
-          )}
-          {view.kind === 'session' && (
-            <SessionView
-              key={`${currentProject.slug}:${view.id}`}
-              sessionId={view.id}
-              projectSlug={currentProject.slug}
-              onCardCreated={cardCreated}
-              onOpenCard={openCard}
-              onSessionUpdated={sessionUpdated}
-            />
-          )}
-          {view.kind === 'cards' && (
-            <CardsScreen
-              projectSlug={currentProject.slug}
-              dataVersion={dataVersion}
-              onOpenCard={openCard}
-            />
-          )}
-          {view.kind === 'account-settings' && (
-            <AccountSettingsScreen
-              displayName={displayName}
-              onDisplayNameChanged={setDisplayName}
-              project={currentProject}
-              onProjectSettings={() =>
-                navigate({
-                  kind: 'project-settings',
-                  projectSlug: currentProject.slug,
-                })
-              }
-            />
-          )}
-          {view.kind === 'project-settings' && (
-            <ProjectSettingsScreen
-              project={currentProject}
-              canDeleteProject={projects.length > 1}
-              onProjectChanged={projectChanged}
-              onProjectDeleted={projectDeleted}
-            />
-          )}
-          {view.kind === 'recall' && (
-            <RecallScreen
-              key={navigationKey}
-              query={view.query ?? null}
-              projectSlug={currentProject.slug}
-              direction={view.direction ?? null}
-              fromCardId={view.cardId ?? null}
-              onOpenCard={openCard}
-              onNew={goHome}
-            />
-          )}
-          {view.kind === 'card' && (
-            <CardPage
-              key={`${view.id}:${navigationKey}`}
-              cardId={view.id}
-              projectSlug={currentProject.slug}
-              fromRecall={fromRecall}
-              onDeleted={cardDeleted}
-              onStarted={started}
-              onRecallFromCard={recallFromCard}
-              onChanged={() => setDataVersion(v => v + 1)}
-            />
-          )}
-        </main>
+    <>
+      <div className="listen-float">
+        <ListenListPanel
+          items={listen.items}
+          loaded={listen.loaded}
+          onAdd={listen.add}
+          onRemove={listen.remove}
+          onPick={pickListenItem}
+          onRetryLoad={listen.retry}
+        />
       </div>
-    </div>
+      <div className="app">
+        <div className="workspace">
+          <AppNavigationProvider navigate={navigate}>
+            <Sidebar
+              sessions={openSessions}
+              activeSessionId={viewSessionId}
+              activeCardId={view.kind === 'card' ? view.id : null}
+              view={view.kind}
+              displayName={displayName}
+              projects={projects}
+              currentProject={currentProject}
+              recallQuery={view.kind === 'recall' ? (view.query ?? null) : null}
+              recentCards={recentCards}
+              onDeleteSession={removeSession}
+              onRecall={runRecall}
+              onSelectProject={selectProject}
+              onProjectCreated={project => {
+                setProjects(previous => [...(previous ?? []), project]);
+                selectProject(project.slug);
+              }}
+            />
+          </AppNavigationProvider>
+          <main className="main">
+            {error && <p className="error">{error}</p>}
+            {view.kind === 'new' && (
+              <StartSessionForm
+                projectSlug={currentProject.slug}
+                fill={listenFill}
+                onFillApplied={() => setListenFill(null)}
+                onStarted={started}
+              />
+            )}
+            {view.kind === 'session' && (
+              <SessionView
+                key={`${currentProject.slug}:${view.id}`}
+                sessionId={view.id}
+                projectSlug={currentProject.slug}
+                onCardCreated={cardCreated}
+                onOpenCard={openCard}
+                onSessionUpdated={sessionUpdated}
+              />
+            )}
+            {view.kind === 'cards' && (
+              <CardsScreen
+                projectSlug={currentProject.slug}
+                dataVersion={dataVersion}
+                onOpenCard={openCard}
+              />
+            )}
+            {view.kind === 'account-settings' && (
+              <AccountSettingsScreen
+                displayName={displayName}
+                onDisplayNameChanged={setDisplayName}
+                project={currentProject}
+                onProjectSettings={() =>
+                  navigate({
+                    kind: 'project-settings',
+                    projectSlug: currentProject.slug,
+                  })
+                }
+              />
+            )}
+            {view.kind === 'project-settings' && (
+              <ProjectSettingsScreen
+                project={currentProject}
+                canDeleteProject={projects.length > 1}
+                onProjectChanged={projectChanged}
+                onProjectDeleted={projectDeleted}
+              />
+            )}
+            {view.kind === 'recall' && (
+              <RecallScreen
+                key={navigationKey}
+                query={view.query ?? null}
+                projectSlug={currentProject.slug}
+                direction={view.direction ?? null}
+                fromCardId={view.cardId ?? null}
+                onOpenCard={openCard}
+                onNew={goHome}
+              />
+            )}
+            {view.kind === 'card' && (
+              <CardPage
+                key={`${view.id}:${navigationKey}`}
+                cardId={view.id}
+                projectSlug={currentProject.slug}
+                fromRecall={fromRecall}
+                onDeleted={cardDeleted}
+                onStarted={started}
+                onRecallFromCard={recallFromCard}
+                onChanged={() => setDataVersion(v => v + 1)}
+              />
+            )}
+          </main>
+        </div>
+      </div>
+    </>
   );
 }

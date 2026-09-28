@@ -810,9 +810,13 @@ body {
   min-width: 0;
 }
 
+/* Not sticky (unlike the sidebar and the conversation's title bar): once the
+   listen-list trigger became a permanent fixture at the true top of the page
+   (see .listen-float), a session's own player riding the sticky rail up to
+   park itself just under that trigger for the whole time you scrolled the
+   conversation stopped looking like a feature and started looking like
+   clutter. It now scrolls away with the page like ordinary content. */
 .related-rail {
-  position: sticky;
-  top: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -826,6 +830,26 @@ body {
   color: var(--accent);
   font-size: 12px;
   letter-spacing: 0.05em;
+}
+
+/* Without a player, "想起されているもの" is the first thing in the rail and
+   sits flush at the rail's own top (24px), level with the sidebar brand row
+   and the conversation's title bar -- all plain labels, none reaching the far
+   right corner where the listen-list trigger floats (see .listen-float), so
+   nothing here actually collides with it. A player renders .rail-cap first
+   instead (a real, sticky, blank 40px band), which both clears the trigger
+   and gives the player something to visibly tuck under while scrolling. */
+.rail-cap {
+  position: sticky;
+  top: 24px;
+  z-index: 5;
+  height: 40px;
+  background: var(--bg);
+  /* Paints the same colour over the 24px above the band (like .track-header
+     and .card-target already do), so the player scrolling up behind it can't
+     peek through above y:24 -- the listen-list trigger's own fill only covers
+     that gap where its pill actually is, not the rest of this column's width. */
+  box-shadow: 0 -24px 0 var(--bg);
 }
 
 .rail-player .player {
@@ -874,6 +898,149 @@ body {
 
 .rail-card-title:hover {
   color: var(--accent);
+}
+
+/* Listen list: a trigger that belongs to no screen, so it floats independently
+   in the top-right corner rather than joining any screen's own header row (it
+   is a Yes/No question the project settled: joining page-specific rows would
+   dilute it into "just another button" among unrelated controls).
+
+   It is fixed to the true top of the viewport -- not sticky -- so it stays
+   within reach while the page scrolls, and it rides over the content like a
+   chip rather than pushing anything down. .card-target's own actions were
+   moved off that same corner (see .card-page .card-target) so the two never
+   crowd each other.
+
+   `sticky` looks like the obvious fit (it is what everything else on this
+   page uses) but this trigger is never meant to start out "in flow" and only
+   pin once scrolled past a point -- it is meant to be pinned from the very
+   first paint, which is what `fixed` is for. `sticky` was tried twice and
+   failed both times, for opposite reasons: a *zero-height* sticky element does
+   not actually stick in this engine (verified -- it just scrolls off with the
+   page), and canceling that height back out with a negative margin (so it
+   would not push .app down) left the sticky element's own containing block
+   effectively zero-height too, which broke it the same way again. `fixed`
+   sidesteps both: being removed from layout entirely, its height can never
+   push anything else down, sticky or not, and it needs no such trick.
+
+   left/right span the viewport so max-width/margin/padding below can center a
+   box the same width as .app's own, keeping the trigger's right edge lined up
+   with the content's regardless of viewport width. */
+.listen-float {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.listen-menu {
+  position: relative;
+  pointer-events: auto;
+}
+
+.listen-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  /* Slightly more on the left than the right: 聴's own left-side-bearing sits
+     closer to its box edge than the chevron icon's does to its box edge, so
+     equal padding here still read as tighter on the left (verified zoomed in
+     -- box-model padding alone was already equal). */
+  padding: 0 14px 0 18px;
+  /* No CSS background or border: the button is plain text over
+     .listen-trigger-outline (a sibling SVG, painted behind it via z-index),
+     which provides both. A rectangular CSS background would fill square
+     corners that stick out past the curve wherever it flares outward past the
+     rectangle's edge -- only a fill shaped by the same path avoids that. */
+  border: none;
+  background: none;
+  position: relative;
+  z-index: 1;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+/* Sized to the button's own box (both are the only children of .listen-menu,
+   and an absolutely positioned element does not add to its size), so it lines
+   up exactly regardless of the button's actual rendered width. Unpositioned
+   (z-index: auto), so the button's own z-index: 1 above is enough to paint it
+   on top despite coming first in the DOM. */
+.listen-trigger-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.listen-trigger-outline path {
+  fill: var(--panel-2);
+  stroke: var(--line);
+  stroke-width: 1;
+  /* Keeps the stroke a constant 1px on screen even though preserveAspectRatio
+     scales the path's own coordinate system, which would otherwise stretch a
+     plain stroke-width unevenly. */
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.15s ease;
+}
+
+.listen-trigger:hover ~ .listen-trigger-outline path,
+.listen-trigger[aria-expanded='true'] ~ .listen-trigger-outline path {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.listen-trigger svg {
+  flex: none;
+  width: 10px;
+  height: 7px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.12s ease;
+}
+
+/* Inverts to a solid accent fill, like .session-finish's hover, rather than
+   just recoloring the outline. */
+.listen-trigger:hover,
+.listen-trigger[aria-expanded='true'] {
+  color: var(--accent-ink);
+}
+
+.listen-trigger[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.listen-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: min(60vh, 480px);
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid rgba(200, 162, 107, 0.22);
+  border-radius: 10px;
+  background: linear-gradient(145deg, #2a2634 0%, #211e2a 100%);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* Edit/delete ride in the sticky title bar, to the right of the work title. */
@@ -1325,6 +1492,17 @@ button.primary {
   color: var(--accent);
 }
 
+.listen-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .error {
   color: #e08a8a;
   font-size: 14px;
@@ -1440,6 +1618,10 @@ button.primary {
   gap: 12px;
   height: 40px;
   margin: 0 0 14px;
+  /* Right-aligned, but short of the actual right edge: that corner is shared
+     with the listen-list trigger (.listen-float), and the two rows crowded
+     each other when both hugged the same edge. */
+  padding-right: 150px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
   box-shadow: 0 -24px 0 var(--bg);
@@ -1891,28 +2073,32 @@ button.primary {
   font-size: 13px;
 }
 
-/* Held to the same reading width as the settings screen and centred with it,
-   so the two narrow screens sit the same way. Left alone the fields stretched
-   the full width of the main area, which is far wider than a form wants. */
+/* One fixed shape whether or not a URL has been pasted: pasting/clearing a
+   link used to reflow the whole screen between a centred narrow form and a
+   two-column one, which read as the layout itself being unstable rather than
+   just a preview appearing. The right column stays reserved (blank without a
+   preview) so the shape never changes, and reaches the same right edge as the
+   session and card screens' own right column (.related-rail, .card-actions'
+   150px reserve) instead of sitting wherever a centered fixed-width grid
+   happened to land. */
 .start-grid {
   display: grid;
-  grid-template-columns: minmax(0, 560px);
-  justify-content: center;
+  grid-template-columns: 1fr 320px;
   gap: 24px;
   align-items: start;
 }
 
-.start-grid.has-preview {
-  grid-template-columns: minmax(0, 560px) 320px;
-}
-
-.start-preview {
+/* Holds the player preview at the top of the viewport. */
+.start-side {
   position: sticky;
   top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 @media (max-width: 860px) {
-  .start-grid.has-preview {
+  .start-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1935,6 +2121,16 @@ button.primary {
 .start-metadata-preview .field {
   flex: 1 1 140px;
   margin-bottom: 0;
+}
+
+/* Just wide enough for a 10-character ISO date (2024-01-15); the space that
+   frees up goes to .field-record-label instead. */
+.start-metadata-preview .field-released {
+  flex: 0 0 110px;
+}
+
+.start-metadata-preview .field-record-label {
+  flex: 2 1 160px;
 }
 
 /* Set apart from the title/artist/URL group above it: it only appears once
@@ -2042,4 +2238,79 @@ button.primary {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.listen-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.listen-add {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.listen-add-submit {
+  flex: none;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.listen-error,
+.listen-notice {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.listen-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listen-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+
+.listen-item:hover {
+  background: var(--hover);
+}
+
+.listen-item-main {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.listen-item-del {
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.listen-item:hover .listen-item-del,
+.listen-item-del:focus-visible {
+  opacity: 1;
 }

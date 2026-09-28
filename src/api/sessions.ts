@@ -36,6 +36,9 @@ export function createSession(
     continueFromCardId?: string;
     playerUrl?: string;
     metadataExtras?: MetadataExtras;
+    // The listen list item the form was filled in from; the server removes it
+    // once the session exists.
+    listenItemId?: string;
   }
 ): Promise<{ session: Session; messages: ChatMessage[] }> {
   return request(`${projectApi(projectSlug)}/sessions`, {
@@ -47,6 +50,7 @@ export function createSession(
       continueFromCardId: options?.continueFromCardId,
       playerUrl: options?.playerUrl,
       metadataExtras: options?.metadataExtras,
+      listenItemId: options?.listenItemId,
     }),
   });
 }

@@ -252,6 +252,40 @@ export const migrations: Migration[] = [
       removeTextDefault(db, 'cards', 'visibility', 'private');
     },
   },
+  {
+    // Id 11 is deliberately unused. A development database recorded a
+    // migration 11 from an earlier iteration of the project URL work that never
+    // shipped, and a new migration reusing that id would be skipped there.
+    id: 12,
+    name: 'add the listen list',
+    up(db) {
+      // Songs an account wants to listen to later. Private to the account
+      // even inside a shared project, like sessions, and never a candidate for
+      // recall: an item has no embedding and is not a card. The player is the
+      // parsed link as JSON, like a session's; title and artist may be blank
+      // when a pasted link did not resolve or the entry was plain text.
+      db.exec(
+        `CREATE TABLE listen_items (
+           id TEXT PRIMARY KEY,
+           public_id TEXT NOT NULL,
+           project_id TEXT NOT NULL,
+           user_id TEXT NOT NULL,
+           title TEXT NOT NULL,
+           artist TEXT NOT NULL,
+           player TEXT,
+           created_at TEXT NOT NULL,
+           FOREIGN KEY (project_id) REFERENCES projects (id),
+           FOREIGN KEY (user_id) REFERENCES users (id)
+         );
+
+         CREATE UNIQUE INDEX idx_listen_items_project_public
+           ON listen_items (project_id, public_id);
+
+         CREATE INDEX idx_listen_items_owner
+           ON listen_items (project_id, user_id, created_at);`
+      );
+    },
+  },
 ];
 
 function uniqueValue(
